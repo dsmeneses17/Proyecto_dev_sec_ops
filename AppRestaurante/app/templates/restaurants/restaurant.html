@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Restaurante{% endblock %}
+
+{% block content %}
+<div class="page-container restaurant-container">
+
+  <h2>🍽️ Información del Restaurante</h2>
+
+  <div class="card">
+    <div class="row">
+      <span class="label">Nombre:</span>
+      <span class="value">{{ restaurant.nombre }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Slug:</span>
+      <span class="value">{{ restaurant.slug }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Descripción:</span>
+      <span class="value">{{ restaurant.descripcion or "—" }}</span>
+    </div>
+
+    <div class="row">
+      <span class="label">Teléfono:</span>
+      <span class="value">{{ restaurant.telefono or "—" }}</span>
+    </div>
+
+    <div class="row">
+  <span class="label">Dirección:</span>
+  <span class="value">{{ restaurant.direccion or "—" }}</span>
+</div>
+
+<div class="row">
+  <span class="label">Horarios:</span>
+  <pre class="value pre">
+    {% if restaurant.horarios %}
+        {% if restaurant.horarios.raw %}
+    {{ restaurant.horarios.raw }}
+        {% else %}
+    {{ restaurant.horarios | tojson(indent=2) }}
+        {% endif %}
+    {% else %}
+    —
+    {% endif %}
+      </pre>
+</div>
+
+    {% if restaurant.logo %}
+    <div class="logo-container">
+      <img src="{{ restaurant.logo }}" alt="Logo del restaurante">
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="actions">
+    <a href="/restaurants/restaurant_form" class="btn btn-primary">✏️ Editar</a>
+  </div>
+
+</div>
+<script>
+const modalHorarios = document.getElementById("horarios");
+
+if (data.horarios) {
+    if (data.horarios.raw) {
+        // Si es texto plano, mostrarlo tal cual, respetando saltos de línea
+        modalHorarios.innerText = data.horarios.raw;
+    } else {
+        // Si es JSON, mostrarlo formateado
+        modalHorarios.innerText = JSON.stringify(data.horarios, null, 2);
+    }
+} else {
+    modalHorarios.innerText = ""; // vacío si no hay horarios
+}
+</script>
+{% endblock %}

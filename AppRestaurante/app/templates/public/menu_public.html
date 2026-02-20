@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ menu.restaurant.nombre }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-3">
+
+    <!-- Header -->
+    <div class="text-center mb-4">
+        {% if menu.restaurant.logo_url %}
+            <img src="{{ menu.restaurant.logo_url }}" 
+                 class="img-fluid mb-2" 
+                 style="max-height: 100px;">
+        {% endif %}
+        <h2>{{ menu.restaurant.nombre }}</h2>
+    </div>
+
+    <!-- Navegación por categorías -->
+    <div class="mb-3">
+        <div class="nav nav-pills flex-nowrap overflow-auto">
+            {% for categoria in menu.categorias %}
+                <a href="#cat-{{ categoria.id }}" 
+                   class="nav-link me-2">
+                    {{ categoria.nombre }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Lista de platos -->
+    {% for categoria in menu.categorias %}
+        <div id="cat-{{ categoria.id }}" class="mb-4">
+            <h4 class="border-bottom pb-2">{{ categoria.nombre }}</h4>
+
+            {% for plato in categoria.platos %}
+                <div class="card mb-3 shadow-sm">
+                    <div class="row g-0">
+                        {% if plato.imagen_url %}
+                        <div class="col-4">
+                            <img src="{{ plato.imagen_url }}" 
+                                 class="img-fluid rounded-start">
+                        </div>
+                        {% endif %}
+
+                        <div class="col">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    {{ plato.nombre }}
+                                    {% if plato.destacado %}
+                                        <span class="badge bg-warning text-dark">⭐</span>
+                                    {% endif %}
+                                </h6>
+
+                                <p class="card-text small text-muted">
+                                    {{ plato.descripcion }}
+                                </p>
+
+                                <div>
+                                    {% if plato.precio_oferta %}
+                                        <span class="text-danger fw-bold">
+                                            ${{ plato.precio_oferta }}
+                                        </span>
+                                        <span class="text-muted text-decoration-line-through small">
+                                            ${{ plato.precio }}
+                                        </span>
+                                    {% else %}
+                                        <span class="fw-bold">
+                                            ${{ plato.precio }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if plato.etiquetas %}
+                                    <div class="mt-2">
+                                        <span class="badge bg-secondary">
+                                            {{ plato.etiquetas }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+        </div>
+    {% endfor %}
+
+</div>
+
+</body>
+</html>

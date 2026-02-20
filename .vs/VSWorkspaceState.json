@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\ApiRestaurante\\app",
+    "\\AppRestaurante",
+    "\\AppRestaurante\\app",
+    "\\AppRestaurante\\venv",
+    "\\AppRestaurante\\venv\\Lib",
+    "\\AppRestaurante\\venv\\Lib\\site-packages",
+    "\\AppRestaurante\\venv\\Lib\\site-packages\\werkzeug",
+    "\\AppRestaurante\\venv\\Lib\\site-packages\\werkzeug\\debug",
+    "\\AppRestaurante\\venv\\Lib\\site-packages\\werkzeug\\middleware"
+  ],
+  "SelectedNode": "\\AppRestaurante\\venv\\Lib\\site-packages\\werkzeug\\middleware\\http_proxy.py",
+  "PreviewInSolutionExplorer": false
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Restaurante{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+ 
+</head>
+<body>
+
+  
+  <!-- Navbar solo si hay login válido -->
+<header>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">🍽 Restaurante</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+              aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="/">Inicio</a>
+          </li>
+          
+          <li class="nav-item">
+            <a class="nav-link" href="/categories">Categorías</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/platos">Platos</a>
+          </li>
+          <!-- Menú Público -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="menuPublicoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Menú Público
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="menuPublicoDropdown">
+              <li><a class="dropdown-item" href="/menu/{{ restaurant_slug }}" target="_blank">Ver Menú</a></li>
+              <li><a class="dropdown-item" href="/menu/{{ restaurant_slug }}/qr" target="_blank">QR</a></li>
+            </ul>
+          </li>
+           <li class="nav-item">
+            <a class="nav-link" href="/api/v1/auth/logout">Cerrar sesión</a>
+          </li>
+
+        
+        </ul>
+      </div>
+    </div>
+  </nav>
+</header>
+
+
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Restaurante. Todos los derechos reservados.</p>
+  </footer>
+
+</body>
+</html>

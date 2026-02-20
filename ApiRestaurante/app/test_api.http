@@ -1,0 +1,98 @@
+### Registro de nuevo usuario
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqdWFuIiwiZXhwIjoxNzY5NDQ3MTQyfQ.8AakSdzypnx7O-6Kj_tb4RXTbJPeuftN5mdF39BTyss
+### Registrar usuario
+POST http://127.0.0.1:8080/api/v1/auth/register
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre_completo": "Juan Pérez",
+  "usuario": "admin",
+  "password": "1234",
+  "rol": "admin"
+}
+
+
+
+### Login (obtener JWT)
+POST http://127.0.0.1:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "usuario": "admin",
+  "password": "1234"
+}
+
+### Ejemplo: usar el token en rutas protegidas
+# Copia el token obtenido en el login y reemplázalo en {{token}}
+
+
+### Obtener restaurante del usuario
+GET http://127.0.0.1:8080/api/v1/admin/restaurant
+Authorization: Bearer {{token}}
+### Obtener restaurante del usuario
+GET http://127.0.0.1:8080/api/v1/admin/restaurant
+Authorization: Bearer {{token}}
+
+### Crear restaurante
+POST http://127.0.0.1:8080/api/v1/admin/restaurant
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Mi Restaurante",
+  "address": "Calle 123"
+}
+
+### Actualizar restaurante
+PUT http://127.0.0.1:8080/api/v1/admin/restaurant
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Restaurante Actualizado",
+  "address": "Calle 456"
+}
+
+### Eliminar restaurante
+DELETE http://127.0.0.1:8080/api/v1/admin/restaurant
+Authorization: Bearer {{token}}
+
+### Listar categorías
+GET http://127.0.0.1:8080/api/v1/admin/categories
+Authorization: Bearer {{token}}
+
+### Crear categoría
+POST http://127.0.0.1:8080/api/v1/admin/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Entradas"
+}
+
+### Actualizar categoría
+PUT http://127.0.0.1:8080/api/v1/admin/categories/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Platos principales"
+}
+
+### Eliminar categoría
+DELETE http://127.0.0.1:8080/api/v1/admin/categories/1
+Authorization: Bearer {{token}}
+
+### Reordenar categorías
+PATCH http://127.0.0.1:8080/api/v1/admin/categories/reorder
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "order": [2, 1, 3]
+}
+
+### Listar platos
+GET http://127.0.0.1:8080/api/v1/admin/dishes
+Authorization: Bearer {{token}}

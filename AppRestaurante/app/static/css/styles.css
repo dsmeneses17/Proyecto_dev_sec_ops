@@ -1,0 +1,1018 @@
+/* Ajuste general del body */
+body {
+  font-family: Arial, sans-serif;
+  background: #f9f9f9;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 180px); 
+}
+
+.login-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  width: 90%;              /* ocupa casi todo en móvil */
+  max-width: 400px;        /* límite en pantallas grandes */
+}
+
+/*menu*/
+
+.navbar {
+  background-color: #2c3e50; /* fondo oscuro */
+  padding: 0.8rem 2rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+/* Eliminar puntos en el menú */
+.navbar-nav {
+  list-style: none; /* Elimina las viñetas */
+  padding-left: 0;  /* Elimina el padding izquierdo */
+}
+
+/* O, si prefieres aplicarlo solo a los li */
+.navbar-nav .nav-item {
+  list-style: none; /* Elimina las viñetas en los <li> */
+}
+
+.navbar .navbar-brand {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.navbar .navbar-nav {
+  display: flex;
+  justify-content: flex-start;
+  gap: 2rem;
+  margin-left: auto;
+}
+
+.navbar .nav-link {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.6rem 1rem;
+}
+
+.navbar .nav-link:hover {
+  background-color: #3498db;
+  border-radius: 5px;
+  color: white;
+}
+
+.navbar .nav-item.dropdown .dropdown-menu {
+  background-color: #2c3e50;
+  border: none;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.navbar .dropdown-item {
+  color: #ecf0f1;
+}
+
+.navbar .dropdown-item:hover {
+  background-color: #3498db;
+}
+
+/* Hamburger Menu */
+.navbar-toggler {
+  border: none;
+}
+
+.navbar-toggler-icon {
+  background-color: white;
+}
+
+/* Responsive Styles (Mobile) */
+@media (max-width: 768px) {
+  .navbar-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background-color: #34495e;
+    display: none;
+  }
+
+  .navbar-nav.active {
+    display: flex;
+  }
+
+  .navbar-nav .nav-link {
+    padding: 1rem;
+    font-size: 1.2rem;
+  }
+
+  .navbar-toggler {
+    display: block;
+  }
+}
+
+.main-content {
+  padding-top: 80px; /* Para que el contenido no quede debajo del navbar */
+}
+
+
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  padding: 0.6rem 1rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #45a049;
+}
+
+#msg {
+  margin-top: 1rem;
+  text-align: center;
+  color: red;
+}
+
+/* Media queries para pantallas más grandes */
+@media (min-width: 768px) {
+  .login-container {
+    width: 400px;   /* más ancho en tablets/PC */
+    padding: 2.5rem;
+  }
+
+  input, button {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .login-container {
+    width: 500px;   /* aún más ancho en monitores grandes */
+  }
+}
+
+
+/*menu*/
+
+/* Estilos generales del navbar */
+
+
+
+.logo {
+  font-weight: bold;
+  font-size: 1rem;        /* más pequeño */
+  color: white;
+}
+
+/* Forzar que los dropdowns se oculten hasta click */
+
+
+
+/* Botón hamburguesa (solo visible en móvil) */
+.toggle {
+  display: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: white;
+}
+
+/* Responsive */
+
+
+
+/* Ajuste para que el contenido no quede debajo del menú fijo */
+
+.menu-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+main {
+  flex-grow: 1;
+  padding: 100px 2rem 80px;
+  width: 100%;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/*fin menu*/
+
+/*footer*/
+
+footer {
+  background: #333;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+}
+
+
+
+
+
+/*fin footer*/
+
+
+/*formuliario*/
+
+/* Contenedor del formulario */
+
+/* Contenedor del formulario */
+/* Contenedor del formulario */
+.form-container {
+  background: #fff;
+  padding: 2rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  width: 95%;
+  max-width: 700px;
+  max-height: 90vh;     /* nunca más alto que la pantalla */
+  overflow-y: auto;     /* scroll interno si se pasa */
+}
+
+
+.form-container:hover {
+  transform: translateY(-3px); /* efecto sutil al pasar el mouse */
+}
+
+/* Título */
+.form-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* Etiquetas */
+.form-container label {
+  display: block;
+  margin-top: 1rem;
+  font-weight: 600;
+  color: #555;
+}
+
+/* Inputs */
+.form-container input {
+  width: 100%;
+  padding: 0.9rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-container input:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.3);
+  outline: none;
+}
+
+/* Botón */
+.form-container button {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.form-container button:hover {
+  background: linear-gradient(135deg, #45a049, #3e8e41);
+  transform: scale(1.02);
+}
+
+/* Mensajes */
+#msg {
+  margin-top: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .form-container {
+    padding: 1rem;
+  }
+
+  .form-container input,
+  .form-container button {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Responsive para tablets */
+@media (min-width: 768px) {
+  .form-container {
+    padding: 3rem;
+  }
+}
+@media (min-width: 992px) {
+  .form-container form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-container form button {
+    grid-column: span 2; /* botón ocupa toda la fila */
+  }
+}
+
+
+/* Responsive para escritorio grande */
+@media (min-width: 1200px) {
+  .form-container {
+    max-width: 900px;
+  }
+
+  .form-container form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+  }
+
+  .form-container form label,
+  .form-container form input {
+    width: 100%;
+  }
+
+  .form-container form button {
+    grid-column: span 2; /* botón ocupa toda la fila */
+  }
+}
+
+
+.form-container form {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* dos columnas iguales */
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: span 2;
+}
+
+
+.form-check {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.form-check-label {
+  margin-right: 0.5rem; /* espacio entre label y checkbox */
+}
+
+
+/* Contenedor de acciones dentro del formulario */
+.form-actions {
+  display: flex;
+  justify-content: center;   /* centra horizontalmente */
+  align-items: center;
+  gap: 1rem;                 /* espacio entre botones */
+  margin-top: 1.5rem;
+  grid-column: span 2;       /* ocupa las dos columnas del grid */
+}
+
+
+.form-actions .btn {
+  width: 200px;               /* deja que el botón se ajuste al contenido */
+  padding: 0.4rem 0.8rem;    /* tamaño compacto */
+  font-size: 0.85rem;
+}
+
+/* Centrar el botón "Nueva Categoría" */
+
+#mostrarFormBtn {
+  display: inline-block;   /* evita que se expanda a toda la fila */
+  width: 140px;            /* ancho fijo compacto */
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  margin: 1rem auto;       /* lo centra horizontalmente */
+}
+
+
+/* Botones principales (Guardar, Cancelar, Nueva Categoría) */
+.btn-custom,
+.form-actions .btn {
+  width: 140px;          /* ancho fijo más angosto */
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+
+@media (min-width: 992px) {
+  .form-container form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* cada grupo ocupa una sola columna */
+  .form-group {
+    grid-column: auto;
+  }
+
+  /* botón ocupa toda la fila */
+  .form-container form button {
+    grid-column: span 2;
+  }
+  .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: span 2; /* ocupa las dos columnas */
+}
+
+}
+
+/* Grupo checkbox alineado horizontal */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;   /* espacio pequeño entre label y checkbox */
+}
+
+.form-check-label {
+  margin: 0;     /* elimina márgenes extra del label */
+}
+
+.form-check-input {
+  width: 1rem;   /* tamaño estándar del checkbox */
+  margin: 0;     /* elimina margen extra */
+}
+
+
+  /* botón ocupa toda la fila
+  .form-container form button {
+    grid-column: span 2;
+  } */
+
+
+
+/*fin formulario*/
+
+/*modal */
+
+
+.modal-overlay {
+  display: none; /* oculto por defecto */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); /* fondo semi-transparente */
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #fff;
+  width: 600px;
+  margin: 10% auto;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: left;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.modal-content p {
+  margin: 8px 0;
+}
+
+.btn {
+  display: inline-block;
+  background: #3498db;
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 200px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+
+
+.btn:hover {
+  background: #2980b9;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-20px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
+
+/* Fondo oscuro que cubre toda la pantalla */
+
+.modal {
+  display: none; /* clave */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  width: 500px;
+  margin: 8% auto;
+  padding: 25px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.modal-overlay {
+  display: none; /* oculto por defecto */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); /* oscurece la pantalla principal */
+  z-index: 1000; /* encima de todo */
+}
+
+
+/* Campos alineados */
+.modal-field {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
+.modal-field label {
+  font-weight: bold;
+  color: #2c3e50;
+  width: 40%;
+}
+
+.modal-field span {
+  width: 55%;
+  text-align: right;
+}
+
+/* Botón */
+.modal-actions {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.modal-actions button {
+  background: #3498db;
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.modal-actions button:hover {
+  background: #2980b9;
+}
+
+/* Animación */
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-20px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+/*fin modal*/
+
+
+/*grilla categorias*/
+
+/* Estilo general de la tabla */
+#categoriasTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Encabezado */
+#categoriasTable thead {
+  background: #4CAF50;
+  color: white;
+}
+
+#categoriasTable th {
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid #ddd;
+}
+
+/* Filas */
+#categoriasTable td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+/* Alternar colores en filas */
+#categoriasTable tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+#categoriasTable tbody tr:hover {
+  background: #e8f5e9; /* verde muy suave al pasar */
+  cursor: pointer;
+}
+
+/* Columna de acciones */
+#categoriasTable td:last-child {
+  text-align: center;
+}
+
+/* Botones dentro de la tabla */
+#categoriasTable .btn {
+  margin: 0 2px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+
+/*fin grilla categorias*/
+
+/*formato de categorias*/
+.form-wrapper {
+  display: none; /* oculto al inicio */
+  transition: all 0.3s ease;
+  margin-top: 2rem;
+}
+
+.form-wrapper.show {
+  display: block; /* mostramos el contenedor */
+}
+/*fin formato de categorias*/
+
+
+/*restaurant*/
+
+.restaurant-container {
+  width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+.restaurant-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+
+.card {
+  display: flex;
+  flex-wrap: wrap;          /* permite que los rows se acomoden en varias filas */
+  gap: 20px;                /* espacio entre filas/columnas */
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.row {
+  display: flex;            /* label y value en línea */
+  align-items: center;      /* centra verticalmente */
+  width: 48%;               /* cada row ocupa aproximadamente la mitad del card */
+  gap: 8px;                 /* espacio entre label y value */
+  margin-bottom: 10px;
+}
+
+.label {
+  font-weight: bold;
+  width: 40%;          /* ancho mínimo para que labels se alineen */
+}
+
+.value {
+  flex: 1;                  /* ocupa el espacio restante */
+  word-break: break-word;
+}
+
+.logo-container {
+  width: 100%;        /* ancho del contenedor */
+  height: 200px;      /* altura deseada */
+  overflow: hidden;   /* recorta cualquier parte que sobresalga */
+}
+
+.logo-container img {
+  width: 100%;        /* ocupa todo el ancho */
+  height: 100%;       /* ocupa toda la altura */
+  object-fit: cover;  /* rellena el div sin deformar la imagen */
+  display: block;     /* evita espacios extra debajo de la imagen */
+}
+
+
+.pre {
+  background: #f5f5f5;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  overflow-x: auto;
+}
+
+pre.value {
+  white-space: pre-wrap;  /* respeta saltos de línea y ajusta texto */
+  word-wrap: break-word;  /* corta líneas largas si es necesario */
+  font-family: monospace;
+  margin: 0;
+}
+
+.actions {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #111;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+/*fin de resturant*/
+
+/*modal*/
+.modal-field {
+  display: flex;
+  align-items: center; /* centra verticalmente todos los hijos */
+  gap: 8px;            /* separación entre label y span */
+  margin-bottom: 10px; /* opcional, espacio entre campos */
+}
+
+.modal-field label,
+.modal-field span {
+  line-height: 1.2;    /* uniformiza la altura de línea */
+}
+/*fin modal*/
+
+.acciones {
+  display: flex;
+  gap: 8px; /* espacio entre los iconos */
+  align-items: center;
+}
+
+.inline-form {
+  margin: 0;
+}
+
+.btn-icon {
+  background: none !important;       /* sin fondo */
+  border: none !important;           /* sin borde */
+  padding: 0 !important;             /* sin espacio extra */
+  margin: 0 !important;              /* elimina margen si hay */
+  width: auto !important;            /* ancho natural de la imagen */
+  cursor: pointer !important;        /* puntero al pasar mouse */
+}
+
+.btn-icon img {
+  display: block !important;         /* quita espacios extra */
+  width: 32px !important;            /* ajusta al tamaño deseado */
+  height: 32px !important;           /* ajusta al tamaño deseado */
+  object-fit: contain !important;    /* mantiene proporción */
+}
+.btn-icon:hover img {
+  filter: brightness(0.8);  /* oscurece un poco al pasar */
+  transform: scale(1.1);    /* agranda un poco */
+  transition: all 0.2s ease;
+}
+
+
+/*dish*/
+
+.menu-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.categoria-titulo {
+  margin-bottom: 20px;
+  border-left: 5px solid #e63946;
+  padding-left: 10px;
+}
+
+
+#btnCrearPlato {
+  display: block;
+  width: fit-content;
+  margin-left: auto;
+}
+
+.platos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.plato-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.plato-card:hover {
+  transform: translateY(-5px);
+}
+
+.plato-img {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+}
+
+.plato-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.badge-destacado {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: gold;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.plato-info {
+  padding: 15px;
+}
+
+.descripcion {
+  font-size: 14px;
+  color: #666;
+  min-height: 40px;
+}
+
+.precio-container {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.precio-original {
+  text-decoration: line-through;
+  color: #999;
+  margin-right: 8px;
+}
+
+.precio-oferta {
+  color: #e63946;
+  font-size: 18px;
+}
+
+.precio-normal {
+  font-size: 18px;
+}
+
+.badge-disponible {
+  background: #2a9d8f;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.badge-no {
+  background: #ccc;
+  color: #444;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.btn-editar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.btn-editar:hover {
+  background: #f1f1f1;
+}
+
+.no-disponible {
+  opacity: 0.6;
+}
+
+
+/* ===== MODAL PLATOS ===== */
+
+.modal {
+  display: none;              /* oculto al cargar */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+}
+
+.modal-content {
+  background: #fff;
+  width: 100%;
+  max-width: 600px;           /* 🔥 límite real */
+  margin: 6% auto;
+  padding: 25px;
+  border-radius: 12px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* SOLO inputs del modal */
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  width: 100%;
+  box-sizing: border-box;
+}

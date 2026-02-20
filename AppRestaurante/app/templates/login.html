@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-page">
+
+  <div class="login-container">
+    <h2>Iniciar Sesión</h2>
+
+    <form method="post" action="/api/v1/auth/login">
+      <input type="text" name="usuario" placeholder="Usuario" required />
+      <input type="password" name="password" placeholder="Contraseña" required />
+      <button type="submit">Entrar</button>
+    </form>
+
+    {% if error %}
+      <div id="msg">{{ error }}</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

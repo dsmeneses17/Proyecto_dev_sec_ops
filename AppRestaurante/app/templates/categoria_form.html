@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Categorías{% endblock %}
+
+{% block content %}
+<div class="page-container">
+  <h2>Gestión de Categorías</h2>
+
+  <!-- Botón para mostrar formulario -->
+  <button id="mostrarFormBtn" class="btn btn-success btn-custom">Nueva Categoría</button>
+
+  <!-- Listado de categorías -->
+  <h3 class="mt-4">Listado</h3>
+  <table class="table table-bordered" id="categoriasTable">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Posición</th>
+        <th>Activa</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+  <tbody>
+{% if categorias %}
+  {% for cat in categorias %}
+  <tr>
+    <td>{{ cat.nombre }}</td>
+    <td>{{ cat.descripcion or "" }}</td>
+    <td>{{ cat.posicion }}</td>
+    <td>{{ "Sí" if cat.activa else "No" }}</td>
+    <td>
+       <div class="acciones">
+      <form style="padding-right: 20%;" method="get" action="/categories/{{ cat.id }}" class="inline-form">
+        <button type="submit" class="btn-icon" title="Editar">
+      <img src="/static/img/editar.png" alt="Editar" width="24" height="24">
+    </button>
+      </form>
+      <form method="post" action="/categories/eliminar/{{ cat.id }}" class="inline-form">
+      <button type="submit" class="btn-icon" onclick="return confirm('¿Eliminar categoría?')" title="Eliminar">
+        <img src="/static/img/eliminar.png" alt="Editar" width="24" height="24">
+      </button>
+    </form>
+    </div>
+    </td>
+  </tr>
+  {% endfor %}
+{% else %}
+  <tr>
+    <td colspan="5" class="text-center">No hay categorías registradas</td>
+  </tr>
+{% endif %}
+</tbody>
+  </table>
+
+  <!-- Formulario oculto por defecto -->
+
+
+  <div id="formWrapper" class="form-wrapper {% if categoria %}show{% endif %}">
+    <h3 id="formTitle">{% if categoria %}Editar Categoría{% else %}Crear Categoría{% endif %}</h3>
+    <form id="categoriaForm" method="post" action="/categories">
+      <input type="hidden" id="restaurante_id" name="restaurante_id" value="00000000-0000-0000-0000-000000000000">
+       <input type="hidden" id="categoriaId" name="categoriaId" value="{{ categoria.id if categoria else '' }}">
+
+      <div class="form-group full-width">
+        <label for="nombre" class="form-label">Nombre</label>
+        <input type="text" id="nombre" name="nombre" value="{{ categoria.nombre if categoria else '' }}" required>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="descripcion" class="form-label">Descripción</label>
+        <textarea id="descripcion" name="descripcion">{{ categoria.descripcion if categoria else '' }}</textarea>
+      </div>
+
+<div class="form-group full-width">
+  <label for="posicion" class="form-label">Posición</label>
+  <input type="number" id="posicion" name="posicion" value="{{ categoria.posicion if categoria else '' }}" required>
+
+<div class="form-group form-check full-width">
+  <label for="activa" class="form-check-label">Activa</label>
+  <input type="checkbox" id="activa" name="activa" value="true" {% if categoria and categoria.activa %}checked{% endif %}>
+</div>
+
+
+<div class="form-actions">
+  <button type="submit" class="btn btn-primary">Guardar</button>
+  <button type="button" id="cancelarBtn" class="btn btn-secondary">Cancelar</button>
+</div>
+
+
+    </form>
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    <div id="msg" class="mt-3"></div>
+  </div>
+</div>
+
+<script>
+ // document.getElementById("cancelarBtn").click();
+
+  // function mostrarFormulario(modo="crear", categoria=null) {
+
+  
+  //   const formTitle = document.getElementById("formTitle");
+  //   const form = document.getElementById("categoriaForm");
+
+  //   form.reset();
+  //   form.removeAttribute("data-mode");
+  //   document.getElementById("categoriaId").value = "";
+
+  //   if (modo === "editar" && categoria) {
+  //     formTitle.textContent = "Editar Categoría";
+  //     document.getElementById("categoriaId").value = categoria.id;
+  //     document.getElementById("nombre").value = categoria.nombre;
+  //     document.getElementById("descripcion").value = categoria.descripcion || "";
+  //     document.getElementById("posicion").value = categoria.posicion;
+  //     document.getElementById("activa").checked = categoria.activa;
+  //     form.setAttribute("data-mode", "edit");
+  //   } else {
+  //     formTitle.textContent = "Crear Categoría";
+  //   }
+
+   
+  // }
+
+  
+  async function eliminarCategoria(id) {
+    if (!confirm("¿Seguro que deseas eliminar esta categoría?")) return;
+    const response = await fetch(`/api/v1/admin/categories/${id}`, { method: "DELETE" });
+    if (response.ok) {
+      mostrarAlerta("Categoría eliminada correctamente", "success");
+      cargarCategorias();
+    } else {
+      const data = await response.json();
+      mostrarAlerta(data.detail || "Error al eliminar", "danger");
+    }
+  }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const formWrapper = document.getElementById("formWrapper");
+
+  document.getElementById("mostrarFormBtn").addEventListener("click", () => {
+    formWrapper.classList.add("show"); // muestra el formulario
+  });
+
+  document.getElementById("cancelarBtn").addEventListener("click", () => {
+    formWrapper.classList.remove("show"); // oculta el formulario
+  });
+});
+
+  function mostrarAlerta(mensaje, tipo="danger") {
+    const msgDiv = document.getElementById("msg");
+    msgDiv.innerHTML = `<div class="alert alert-${tipo}" role="alert">${mensaje}</div>`;
+    setTimeout(() => { msgDiv.innerHTML = ""; }, 4000);
+  }
+</script>
+{% endblock %}

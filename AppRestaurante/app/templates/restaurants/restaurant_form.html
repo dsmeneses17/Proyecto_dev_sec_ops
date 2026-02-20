@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Restaurante{% endblock %}
+
+{% block content %}
+<div class="page-container form-container">
+  <h2>Edición Restaurante</h2>
+
+
+  <form id="restaurantForm" method="post" action="/restaurants/restaurant"> 
+  <label for="nombre">Nombre:</label>
+  <input type="text" id="nombre" name="nombre" required value="{{ restaurant.nombre if restaurant else '' }}">
+
+  <label for="slug">Slug (URL amigable):</label>
+  <input readonly type="text" id="slug" name="slug" required value="{{ restaurant.slug if restaurant else '' }}">
+
+  <label for="logo">Logo (URL):</label>
+  <input type="url" id="logo" name="logo" required value="{{ restaurant.logo if restaurant else '' }}">
+
+  <label for="descripcion">Descripción:</label>
+  <input type="text" id="descripcion" name="descripcion" value="{{ restaurant.descripcion if restaurant else '' }}">
+
+  <label for="telefono">Teléfono:</label>
+  <input type="text" id="telefono" name="telefono" value="{{ restaurant.telefono if restaurant else '' }}">
+
+  <label for="direccion">Dirección:</label>
+  <input type="text" id="direccion" name="direccion" value="{{ restaurant.direccion if restaurant else '' }}">
+
+  
+  <label for="horariosText">Horarios (texto plano o JSON):</label>
+  <textarea id="horariosText" placeholder='Ej: {"lunes": "9-18"} o
+Lunes 9-18' rows="5">
+{% if restaurant and restaurant.horarios %}
+    {% if restaurant.horarios.raw %}
+        {{ restaurant.horarios.raw }}
+    {% else %}
+        {{ restaurant.horarios | tojson | escape }}
+    {% endif %}
+{% endif %}
+</textarea>
+  <input type="hidden" name="horarios" id="horariosInput" value="{}">
+  <button type="submit">Guardar</button>
+</form>
+
+
+  <div id="msg"></div>
+
+  <!-- Modal oculto -->
+
+<!-- Modal oculto -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal-content">
+    <h3>✅ Restaurante creado</h3>
+    <div class="modal-field">
+      <label>Nombre:</label>
+      <span id="modalNombre"></span>
+    </div>
+    <div class="modal-field">
+      <label>Slug (URL amigable):</label>
+      <span id="modalSlug"></span>
+    </div>
+    <div class="modal-field">
+      <label>Logo (URL) : </label> 
+      <span id="modalLogo"></span>
+    </div>
+    <div class="modal-field">
+      <label>Descripción:</label>
+      <span id="modalDescripcion"></span>
+    </div>
+    <div class="modal-field">
+      <label>Teléfono:</label>
+      <span id="modalTelefono"></span>
+    </div>
+    <div class="modal-field">
+      <label>Dirección:</label>
+      <span id="modalDireccion"></span>
+    </div>
+    <div class="modal-field">
+      <label>Horarios :</label>
+      <span id="modalHorarios"></span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="window.location.href='/restaurants'">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+  
+  function slugify(text) {
+    return text
+      .toString()
+      .normalize("NFD")                   // quita acentos
+      .replace(/[\u0300-\u036f]/g, "")    // elimina diacríticos
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")       // elimina caracteres no permitidos
+      .replace(/\s+/g, "-")               // espacios → guiones
+      .replace(/-+/g, "-");               // evita guiones repetidos
+  }
+
+  const nombreInput = document.getElementById("nombre");
+  const slugInput = document.getElementById("slug");
+
+ 
+
+
+  nombreInput.addEventListener("input", () => {
+    slugInput.value = slugify(nombreInput.value);
+  });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("restaurantForm");
+  const horariosText = document.getElementById("horariosText");
+  const horariosInput = document.getElementById("horariosInput");
+
+  
+  
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    let parsedHorarios = {};
+    const rawText = horariosText.value.trim();
+
+    if (rawText) {
+        try {
+            // Intentar parsear como JSON
+            parsedHorarios = JSON.parse(rawText);
+        } catch {
+            // Si no es JSON válido, guardarlo como texto plano
+            parsedHorarios = { raw: rawText };
+        }
+    }
+
+    // Guardar en el input hidden para que se envíe
+    horariosInput.value = JSON.stringify(parsedHorarios);
+    const formData = new FormData(this);
+
+    const response = await fetch(this.action, {
+      method: "POST",
+      body: formData
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      // Si no es JSON, intenta leer como texto
+      const text = await response.text();
+      mostrarAlerta("Error inesperado en la respuesta: " + text);
+      return;
+    }
+
+    if (data && data.detail && data.detail.detalle && data.detail.error){
+      if ( typeof data.detail.detalle === "string" && data.detail.detalle.includes("Unauthorized")){
+         mostrarAlerta("Su sessión se terminó, por favor vuelva a ingresar");
+      }
+      return;
+    }
+   
+    
+    // Si no hubo error, llenar el modal
+    document.getElementById("modalNombre").innerText = data.nombre;
+    document.getElementById("modalSlug").innerText = data.slug;
+    document.getElementById("modalDescripcion").innerText = data.descripcion;
+    document.getElementById("modalTelefono").innerText = data.telefono;
+    document.getElementById("modalDireccion").innerText = data.direccion;
+    //document.getElementById("modalHorarios").innerText = 
+    // data.horarios && Object.keys(data.horarios).length > 0 
+    //     ? JSON.stringify(data.horarios, null, 2)  // o formatearlo como quieras
+    //     : "";
+
+    const modalHorarios = document.getElementById("modalHorarios");
+
+    if (data.horarios) {
+        if (data.horarios.raw) {
+            // Si es texto plano, mostrarlo tal cual, respetando saltos de línea
+            modalHorarios.innerText = data.horarios.raw;
+        } else {
+            // Si es JSON, mostrarlo formateado
+            modalHorarios.innerText = JSON.stringify(data.horarios, null, 2);
+        }
+    } else {
+        modalHorarios.innerText = ""; // vacío si no hay horarios
+    }
+    document.getElementById("modalLogo").innerText = data.logo;
+
+    document.getElementById("modalOverlay").style.display = "block";
+  });
+});
+
+
+
+function mostrarAlerta(mensaje) {
+  const msgDiv = document.getElementById("msg");
+  msgDiv.innerHTML = `
+    <div class="alert alert-danger" role="alert">
+      ${mensaje}
+    </div>
+  `;
+  setTimeout(() => { 
+    msgDiv.innerHTML = ""; 
+    window.location.href = "/api/v1/auth/login";
+
+  }, 9000);
+}
+
+
+
+</script>
+{% endblock %}

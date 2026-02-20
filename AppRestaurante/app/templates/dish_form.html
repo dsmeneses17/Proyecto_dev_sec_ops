@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-container">
+<h2>Gestión de Platos</h2>
+
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<!-- Botón crear -->
+<button id="btnCrearPlato">Nuevo Plato</button>
+
+<hr>
+
+<!-- ========================= -->
+<!-- GRILLA POR CATEGORÍAS -->
+<!-- ========================= -->
+
+<hr>
+
+<div class="menu-grid">
+  {% if categorias %}
+  {% for cat in categorias %}
+    <div class="categoria-bloque">
+      <h2 class="categoria-titulo">{{ cat.nombre }}</h2>
+
+      {% if cat.platos %}
+        <div class="platos-grid">
+          {% for plato in cat.platos %}
+          <div class="plato-card {% if not plato.disponible %}no-disponible{% endif %}">
+            
+            <!-- Imagen -->
+            <div class="plato-img">
+              {% if plato.imagen_url %}
+                <img src="{{ plato.imagen_url }}" alt="{{ plato.nombre }}">
+              {% else %}
+                <img src="/static/img/default-dish.jpg" alt="Sin imagen">
+              {% endif %}
+              
+              {% if plato.destacado %}
+                <span class="badge-destacado">⭐ Destacado</span>
+              {% endif %}
+            </div>
+
+            <!-- Info -->
+            <div class="plato-info">
+              <h3>{{ plato.nombre }}</h3>
+              <p class="descripcion">{{ plato.descripcion }}</p>
+
+              <div class="precio-container">
+                {% if plato.precio_oferta %}
+                  <span class="precio-original">${{ plato.precio }}</span>
+                  <span class="precio-oferta">${{ plato.precio_oferta }}</span>
+                {% else %}
+                  <span class="precio-normal">${{ plato.precio }}</span>
+                {% endif %}
+              </div>
+
+              <div class="estado">
+                {% if plato.disponible %}
+                  <span class="badge-disponible">Disponible</span>
+                {% else %}
+                  <span class="badge-no">No disponible</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Botón editar -->
+            <button class="btn-editar"
+              data-id="{{ plato.id }}"
+              data-nombre="{{ plato.nombre }}"
+              data-descripcion="{{ plato.descripcion }}"
+              data-precio="{{ plato.precio }}"
+              data-precio_oferta="{{ plato.precio_oferta }}"
+              data-categoria="{{ cat.id }}"
+              data-disponible="{{ plato.disponible }}"
+              data-destacado="{{ plato.destacado }}"
+              data-etiquetas="{{ plato.etiquetas | join(', ') if plato.etiquetas }}"
+              data-posicion="{{ plato.posicion }}">
+              ✏️
+            </button>
+
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="sin-platos">No hay platos en esta categoría.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+  {% else %}
+    <p class="sin-platos">No hay categorías registradas.</p>
+  {% endif %}
+</div>
+
+
+
+
+<!-- ========================= -->
+<!-- MODAL (AL FINAL) -->
+<!-- ========================= -->
+
+<div id="modalPlato" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3 id="modalTitle">Crear Plato</h3>
+
+    <form id="formPlato" method="post" action="/platos">
+      <input type="hidden" name="plato_id" id="plato_id">
+
+      <label>Nombre</label>
+      <input type="text" name="nombre" id="nombre" required>
+
+      <label>Descripción</label>
+      <textarea name="descripcion" id="descripcion"></textarea>
+
+      <label>Precio</label>
+      <input type="number" step="0.01" name="precio" id="precio" required>
+
+      <label>Precio Oferta</label>
+      <input type="number" step="0.01" name="precio_oferta" id="precio_oferta">
+
+      <label>Categoría</label>
+      <select name="categoria_id" id="categoria_id" required>
+        {% for cat in categorias %}
+          <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+        {% endfor %}
+      </select>
+
+      <label>
+        <input type="checkbox" name="disponible" id="disponible" checked>
+        Disponible
+      </label>
+
+      <label>
+        <input type="checkbox" name="destacado" id="destacado">
+        Destacado
+      </label>
+
+      <label>Etiquetas</label>
+      <input type="text" name="etiquetas" id="etiquetas">
+
+      <label>Posición</label>
+      <input type="number" name="posicion" id="posicion">
+
+      <div class="form-actions">
+        <button type="submit">Guardar</button>
+        <button type="button" id="btnCancelar">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  const modal = document.getElementById("modalPlato");
+  const btnCrear = document.getElementById("btnCrearPlato");
+  const btnCancelar = document.getElementById("btnCancelar");
+  const modalTitle = document.getElementById("modalTitle");
+  
+  const form = document.getElementById("formPlato");
+
+  // Campos
+  const plato_id = document.getElementById("plato_id");
+  const nombre = document.getElementById("nombre");
+  const descripcion = document.getElementById("descripcion");
+  const precio = document.getElementById("precio");
+  const precio_oferta = document.getElementById("precio_oferta");
+  const categoria_id = document.getElementById("categoria_id");
+  const disponible = document.getElementById("disponible");
+  const destacado = document.getElementById("destacado");
+  const etiquetas = document.getElementById("etiquetas");
+  const posicion = document.getElementById("posicion");
+
+  // ABRIR MODAL NUEVO
+  if(btnCrear){
+    btnCrear.addEventListener("click", function() {
+      cargarCategorias();
+      modalTitle.textContent = "Crear Plato";
+      form.reset(); // limpia los campos
+      plato_id.value = "";
+      modal.style.display = "block";
+    });
+  }
+
+  // ABRIR MODAL EDITAR
+  const btnEditar = document.querySelectorAll(".btn-editar");
+  btnEditar.forEach(btn => {
+    btn.addEventListener("click", function() {
+      modalTitle.textContent = "Editar Plato";
+
+      plato_id.value = btn.dataset.id;
+      nombre.value = btn.dataset.nombre;
+      descripcion.value = btn.dataset.descripcion;
+      precio.value = btn.dataset.precio;
+      precio_oferta.value = btn.dataset.precio_oferta || "";
+      categoria_id.value = btn.dataset.categoria;
+      disponible.checked = btn.dataset.disponible === "True" || btn.dataset.disponible === "true";
+      destacado.checked = btn.dataset.destacado === "True" || btn.dataset.destacado === "true";
+      etiquetas.value = btn.dataset.etiquetas || "";
+      posicion.value = btn.dataset.posicion || "";
+
+      modal.style.display = "block";
+    });
+  });
+
+  // CERRAR MODAL
+  if(btnCancelar){
+    btnCancelar.addEventListener("click", function() {
+      modal.style.display = "none";
+    });
+  }
+
+  window.addEventListener("click", function(e){
+    if(e.target === modal){
+      modal.style.display = "none";
+    }
+  });
+
+});
+
+function cargarCategorias(){
+  fetch('/categories/json') // endpoint que devuelve JSON
+    .then(res => res.json())
+    .then(data => {
+      debugger;
+      categoria_id.innerHTML = ""; // limpia dropdown
+      data.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat.id;
+        opt.textContent = cat.nombre;
+        categoria_id.appendChild(opt);
+      });
+    });
+}
+</script>
+</div>
+{% endblock %}

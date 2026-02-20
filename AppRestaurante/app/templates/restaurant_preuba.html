@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mi Restaurante</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <h2 class="mb-4">Mi Restaurante</h2>
+    <form id="restaurantForm" class="card p-4 shadow">
+      <div class="mb-3">
+        <label for="nombre" class="form-label">Nombre</label>
+        <input type="text" class="form-control" id="nombre" required maxlength="100">
+      </div>
+      <div class="mb-3">
+        <label for="descripcion" class="form-label">Descripción</label>
+        <textarea class="form-control" id="descripcion" maxlength="500"></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="logo" class="form-label">Logo (URL)</label>
+        <input type="url" class="form-control" id="logo">
+      </div>
+      <div class="mb-3">
+        <label for="telefono" class="form-label">Teléfono</label>
+        <input type="text" class="form-control" id="telefono">
+      </div>
+      <div class="mb-3">
+        <label for="direccion" class="form-label">Dirección</label>
+        <input type="text" class="form-control" id="direccion">
+      </div>
+      <div class="mb-3">
+        <label for="horarios" class="form-label">Horarios (JSON)</label>
+        <textarea class="form-control" id="horarios" placeholder='{"lunes":"9-18","martes":"9-18"}'></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    </form>
+    <p id="msg" class="mt-3 text-center"></p>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const restaurantId = "ID_DEL_RESTAURANTE"; // reemplaza con el ID real
+
+    // Cargar datos actuales
+    async function loadRestaurant() {
+      try {
+        const response = await fetch(`http://backend_api:5000/api/v1/admin/restaurants/${restaurantId}`, {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!response.ok) throw new Error("No se pudo cargar el restaurante");
+        const data = await response.json();
+
+        document.getElementById("nombre").value = data.nombre || "";
+        document.getElementById("descripcion").value = data.descripcion || "";
+        document.getElementById("logo").value = data.logo || "";
+        document.getElementById("telefono").value = data.telefono || "";
+        document.getElementById("direccion").value = data.direccion || "";
+        document.getElementById("horarios").value = JSON.stringify(data.horarios || {}, null, 2);
+      } catch (err) {
+        document.getElementById("msg").innerText = "Error al cargar datos";
+      }
+    }
+
+    // Guardar cambios
+    document.getElementById("restaurantForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        nombre: document.getElementById("nombre").value,
+        descripcion: document.getElementById("descripcion").value,
+        logo: document.getElementById("logo").value,
+        telefono: document.getElementById("telefono").value,
+        direccion: document.getElementById("direccion").value,
+        horarios: JSON.parse(document.getElementById("horarios").value || "{}")
+      };
+
+      try {
+        const response = await fetch(`http://backend_api:5000/api/v1/admin/restaurants/${restaurantId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error("Error al actualizar");
+        document.getElementById("msg").innerText = "Restaurante actualizado correctamente";
+      } catch (err) {
+        document.getElementById("msg").innerText = "Error al guardar cambios";
+      }
+    });
+
+    loadRestaurant();
+  </script>
+</body>
+</html>
