@@ -4,7 +4,7 @@ import logging
 from app.core.config import settings
 
 # URL del backend de platos
-BACKEND_URL = f"{settings.BACKEND_URL}/admin/dishes/"
+BACKEND_URL = f"{settings.BACKEND_URL}admin/dishes/"
 
 
 def get_headers(token: str):
