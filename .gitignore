@@ -1,0 +1,46 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# ---- FastAPI/Starlette ----
+*.log
+
+# ---- OS / Editor ----
+.DS_Store
+.idea/
+.vscode/
+
+# ---- Node (there is a package.json in the repo) ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Docker ----
+*.pid
+
+# ---- Secrets / env files ----
+.env
+.env.*
+
+# ---- Local DB dumps / backups ----
+*.dump
+
+# ---- Project specific ----
+postgres_data/
+
+# If you ever generate local build outputs
+dist/
+build/
