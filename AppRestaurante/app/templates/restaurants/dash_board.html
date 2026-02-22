@@ -3,10 +3,38 @@
 {% block title %}Panel Admin{% endblock %}
 
 {% block content %}
-<h1>Bienvenido Administrador</h1>
-<p>Aquí puedes gestionar tu restaurante.</p>
-<ul>
-  <li><a href="/admin/restaurants">Mis Restaurantes</a></li>
-  <li><a href="/admin/usuarios">Usuarios</a></li>
-</ul>
+<div class="page-container">
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
+    <div>
+      <h1 class="h3 mb-1">Panel de administración</h1>
+      <div class="text-muted">Gestiona tu restaurante, categorías y platos.</div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card p-3">
+        <div class="fw-bold mb-1">Restaurante</div>
+        <div class="text-muted mb-3">Editar información, horarios y logo.</div>
+        <a class="btn" href="/restaurants">Ver restaurante</a>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card p-3">
+        <div class="fw-bold mb-1">Categorías</div>
+        <div class="text-muted mb-3">Organiza el menú por secciones.</div>
+        <a class="btn" href="/categories">Administrar categorías</a>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card p-3">
+        <div class="fw-bold mb-1">Platos</div>
+        <div class="text-muted mb-3">Agrega, edita y publica platos.</div>
+        <a class="btn" href="/platos">Administrar platos</a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
