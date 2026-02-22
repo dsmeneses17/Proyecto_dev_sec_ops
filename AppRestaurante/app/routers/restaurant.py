@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, HTTPException,   Form
 import requests
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from app.ui.templates import templates
 from app.utils.templates import get_template_context
 from app.services.restaurant_service import enviar_a_backend_externo
 from app.core.config import settings
@@ -11,7 +12,6 @@ from app.core.config import settings
 import json
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 def get_headers(token: str):
     """Genera headers con Authorization Bearer"""

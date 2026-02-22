@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from app.ui.templates import templates
 from app.utils.templates import get_template_context
 import jwt
 from typing import Optional
@@ -15,7 +16,6 @@ from app.services.categoria_service import (
 )
 
 router = APIRouter(tags=["categorias"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

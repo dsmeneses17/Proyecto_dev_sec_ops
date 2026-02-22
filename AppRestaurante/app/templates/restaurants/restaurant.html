@@ -29,24 +29,93 @@
     </div>
 
     <div class="row">
-  <span class="label">Dirección:</span>
-  <span class="value">{{ restaurant.direccion or "—" }}</span>
-</div>
+      <span class="label">Dirección:</span>
+      <span class="value">{{ restaurant.direccion or "—" }}</span>
+    </div>
 
-<div class="row">
-  <span class="label">Horarios:</span>
-  <pre class="value pre">
-    {% if restaurant.horarios %}
+    <div class="row" style="display:block;">
+      <div class="value" style="width: 100%;">
+        {% if restaurant.horarios %}
         {% if restaurant.horarios.raw %}
-    {{ restaurant.horarios.raw }}
+        {# If raw contains JSON, render it nicely as a table; otherwise show plain text #}
+        {% set raw_text = (restaurant.horarios.raw | string) %}
+        {% set raw_dict = (raw_text | default("", true) | from_json) if raw_text and raw_text.strip().startswith('{')
+        else none %}
+
+        {% if raw_dict %}
+        <div class="text-muted mb-2">Horario de atención</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th>Horario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {# Prefer a stable weekday order if keys match Spanish day names #}
+              {% set weekday_order =
+              ["lunes","martes","miercoles","miércoles","jueves","viernes","sabado","sábado","domingo"] %}
+              {% for dia in weekday_order if dia in raw_dict %}
+              {% set horario = raw_dict[dia] %}
+              <tr>
+                <td class="fw-semibold text-capitalize">{{ dia }}</td>
+                <td class="text-muted">{{ horario }}</td>
+              </tr>
+              {% endfor %}
+
+              {# Render any extra keys not covered by the weekday ordering #}
+              {% for dia, horario in raw_dict.items() if dia not in weekday_order %}
+              <tr>
+                <td class="fw-semibold text-capitalize">{{ dia }}</td>
+                <td class="text-muted">{{ horario }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
         {% else %}
-    {{ restaurant.horarios | tojson(indent=2) }}
+        <div class="text-muted mb-2">Horario</div>
+        <div class="alert alert-secondary mb-0" style="white-space: pre-wrap;">
+          {{ restaurant.horarios.raw }}
+        </div>
         {% endif %}
-    {% else %}
-    —
-    {% endif %}
-      </pre>
-</div>
+        {% else %}
+        <div class="text-muted mb-2">Horario de atención</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th>Horario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set weekday_order =
+              ["lunes","martes","miercoles","miércoles","jueves","viernes","sabado","sábado","domingo"] %}
+              {% for dia in weekday_order if dia in restaurant.horarios %}
+              {% set horario = restaurant.horarios[dia] %}
+              <tr>
+                <td class="fw-semibold text-capitalize">{{ dia }}</td>
+                <td class="text-muted">{{ horario }}</td>
+              </tr>
+              {% endfor %}
+
+              {% for dia, horario in restaurant.horarios.items() if dia not in weekday_order %}
+              <tr>
+                <td class="fw-semibold text-capitalize">{{ dia }}</td>
+                <td class="text-muted">{{ horario }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+        {% else %}
+        <span class="text-muted">—</span>
+        {% endif %}
+      </div>
+    </div>
 
     {% if restaurant.logo %}
     <div class="logo-container">
@@ -60,19 +129,4 @@
   </div>
 
 </div>
-<script>
-const modalHorarios = document.getElementById("horarios");
-
-if (data.horarios) {
-    if (data.horarios.raw) {
-        // Si es texto plano, mostrarlo tal cual, respetando saltos de línea
-        modalHorarios.innerText = data.horarios.raw;
-    } else {
-        // Si es JSON, mostrarlo formateado
-        modalHorarios.innerText = JSON.stringify(data.horarios, null, 2);
-    }
-} else {
-    modalHorarios.innerText = ""; // vacío si no hay horarios
-}
-</script>
 {% endblock %}

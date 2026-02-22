@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from app.ui.templates import templates
 from app.utils.templates import get_template_context
 from typing import Optional
 from types import SimpleNamespace
@@ -17,7 +18,6 @@ from app.services.dish_service import (
 )
 
 router = APIRouter(tags=["platos"])
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)

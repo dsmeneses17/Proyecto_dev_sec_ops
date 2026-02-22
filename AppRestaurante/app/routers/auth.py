@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from app.ui.templates import templates
 from app.services import auth_service
 from app.core.config import settings
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 

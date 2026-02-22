@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
+from app.ui.templates import templates
 from fastapi.responses import HTMLResponse
 from app.services.menu_service import get_public_menu
 
@@ -9,7 +10,6 @@ import base64
 from fastapi.responses import HTMLResponse
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/menu/{slug}", response_class=HTMLResponse)

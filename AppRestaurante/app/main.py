@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from app.routers import public_menu
 from.utils.templates import get_template_context
 from app.core.config import settings
+from app.ui.templates import templates
 
 
 
@@ -26,8 +27,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # PUBLIC_PATHS = [ "/api/v1/auth/login", "/api/v1/auth/register"]
 PUBLIC_PATHS = ["/", "/static", "/favicon.ico"]
-# Plantillas HTML
-templates = Jinja2Templates(directory="app/templates")
+# Plantillas HTML (shared)
 
 @app.get("/", response_class=HTMLResponse)
 def mostrar_login(request: Request):
