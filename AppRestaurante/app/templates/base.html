@@ -28,6 +28,9 @@
 
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto align-items-lg-center">
+            {# Show private navigation if user is authenticated (context from middleware or cookies) #}
+            {% set is_authenticated = user_id or request.cookies.get('access_token') %}
+            {% if is_authenticated %}
             <li class="nav-item">
               <a class="nav-link active" href="/">Inicio</a>
             </li>
@@ -39,21 +42,24 @@
               <a class="nav-link" href="/platos">Platos</a>
             </li>
             <!-- Menú Público -->
+            {% set nav_restaurant_slug = restaurant_slug or request.cookies.get('restaurant_slug') %}
+            {% if nav_restaurant_slug %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="menuPublicoDropdown" role="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
                 Menú Público
               </a>
               <ul class="dropdown-menu" aria-labelledby="menuPublicoDropdown">
-                <li><a class="dropdown-item" href="/menu/{{ restaurant_slug }}" target="_blank">Ver Menú</a></li>
-                <li><a class="dropdown-item" href="/menu/{{ restaurant_slug }}/qr" target="_blank">QR</a></li>
+                <li><a class="dropdown-item" href="/menu/{{ nav_restaurant_slug }}" target="_blank">Ver Menú</a></li>
+                <li><a class="dropdown-item" href="/menu/{{ nav_restaurant_slug }}/qr" target="_blank">QR</a></li>
               </ul>
             </li>
+            {% endif %}
+
             <li class="nav-item">
               <a class="nav-link" href="/api/v1/auth/logout">Cerrar sesión</a>
             </li>
-
-
+            {% endif %}
           </ul>
         </div>
       </div>

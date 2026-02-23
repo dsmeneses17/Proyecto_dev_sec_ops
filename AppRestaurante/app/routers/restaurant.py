@@ -32,7 +32,7 @@ def mostrar_dashboard_restaurante(request: Request):
     restaurant_id = request.cookies.get("restaurant_id")
     if not token or rol != "admin":
         # No autorizado → login
-        return RedirectResponse(url="/login", status_code=303)
+        return RedirectResponse(url="/", status_code=303)
 
     # 🔹 Llamar a la API para obtener los datos del restaurante del admin
     try:

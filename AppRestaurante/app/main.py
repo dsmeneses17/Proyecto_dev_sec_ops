@@ -25,12 +25,18 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
-# PUBLIC_PATHS = [ "/api/v1/auth/login", "/api/v1/auth/register"]
-PUBLIC_PATHS = ["/", "/static", "/favicon.ico"]
+# Public paths that shouldn't require JWT cookies.
+PUBLIC_PATHS = ["/", "/static", "/favicon.ico", "/api/v1/auth/login", "/api/v1/auth/logout"]
 # Plantillas HTML (shared)
 
 @app.get("/", response_class=HTMLResponse)
 def mostrar_login(request: Request):
+    # If the user is already authenticated, treat / as "Inicio" and send them to
+    # their dashboard instead of showing the login screen.
+    token = request.cookies.get("access_token")
+    if token:
+        return RedirectResponse(url="/restaurants/", status_code=303)
+
     return templates.TemplateResponse("login.html", {"request": request})
 
 
@@ -105,7 +111,7 @@ async def jwt_middleware(request: Request, call_next):
         token = request.cookies.get("access_token")
 
     if not token:
-        return RedirectResponse(url="/login", status_code=303)
+        return RedirectResponse(url="/", status_code=303)
 
     try:
         #breakpoint()
