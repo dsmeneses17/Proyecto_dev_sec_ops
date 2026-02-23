@@ -2,16 +2,19 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.deps import get_db
 from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.models.dish import Dish
 from datetime import datetime
 import json
 import redis
+from redis.exceptions import RedisError
+from decimal import Decimal
 
 router = APIRouter(prefix="/api/v1/public/menu", tags=["public"])
 
+# In docker-compose we don't run Redis. Keep caching optional.
 redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 @router.get("/{slug}")
@@ -19,15 +22,17 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
 
     cache_key = f"public_menu:{slug}"
 
-    # 🔥 1️⃣ Cache Hit
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
+    # 🔥 1️⃣ Cache Hit (optional)
+    try:
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except RedisError:
+        cached = None
 
     # 🔍 2️⃣ Cache Miss → consulta BD
     restaurant = db.query(Restaurant).filter(
-        Restaurant.slug == slug,
-        Restaurant.activo == True
+        Restaurant.slug == slug
     ).first()
 
     if not restaurant:
@@ -41,7 +46,7 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
         "restaurant": {
             "id": str(restaurant.id),
             "nombre": restaurant.nombre,
-            "logo_url": restaurant.logo_url,
+            "logo_url": restaurant.logo,
             "slug": restaurant.slug,
         },
         "categorias": []
@@ -64,8 +69,8 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
                     "id": str(p.id),
                     "nombre": p.nombre,
                     "descripcion": p.descripcion,
-                    "precio": p.precio,
-                    "precio_oferta": p.precio_oferta,
+                    "precio": float(p.precio) if isinstance(p.precio, Decimal) else p.precio,
+                    "precio_oferta": float(p.precio_oferta) if isinstance(p.precio_oferta, Decimal) else p.precio_oferta,
                     "imagen_url": p.imagen_url,
                     "destacado": p.destacado,
                     "etiquetas": p.etiquetas,
@@ -74,7 +79,11 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
             ]
         })
 
-    # 💾 Guardar en cache por 5 minutos
-    redis_client.setex(cache_key, 300, json.dumps(response))
+    # 💾 Guardar en cache por 5 minutos (optional)
+    try:
+        redis_client.setex(cache_key, 300, json.dumps(response))
+    except (RedisError, TypeError):
+        # If Redis isn't available or response can't be serialized, just skip caching.
+        pass
 
     return response

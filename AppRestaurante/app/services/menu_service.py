@@ -2,7 +2,8 @@ import requests
 from app.models.menu import PublicMenuResponse
 from app.core.config import settings
 
-API_BASE = f"{settings.BACKEND_URL}/public/menu"
+# settings.BACKEND_URL already includes the trailing `/api/v1/`
+API_BASE = f"{settings.BACKEND_URL}public/menu"
 
 
 def get_public_menu(slug: str) -> PublicMenuResponse | None:

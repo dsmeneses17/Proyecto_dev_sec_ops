@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 class DishPublic(BaseModel):
@@ -10,7 +10,8 @@ class DishPublic(BaseModel):
     precio_oferta: Optional[float]
     imagen_url: Optional[str]
     destacado: Optional[bool]
-    etiquetas: Optional[str]
+    # Backend may return etiquetas as a list (e.g. ['no'] or ['Ajiaco']).
+    etiquetas: Optional[Union[str, List[str]]]
 
 
 class CategoryPublic(BaseModel):
