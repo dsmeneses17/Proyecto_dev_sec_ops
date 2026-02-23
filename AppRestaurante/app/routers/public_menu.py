@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from app.ui.templates import templates
 from fastapi.responses import HTMLResponse
-from app.services.menu_service import get_public_menu
+from fastapi.responses import RedirectResponse
+from app.services.menu_service import get_public_menu, list_public_restaurants
 
 import qrcode
 import io
@@ -10,6 +11,31 @@ import base64
 from fastapi.responses import HTMLResponse
 
 router = APIRouter()
+
+
+@router.get("/menu", response_class=HTMLResponse)
+def menu_index(request: Request, slug: str | None = None):
+    """Public entrypoint to access menus without logging in.
+
+    - If `?slug=...` is provided, redirect to `/menu/{slug}`.
+    - Else if a `restaurant_slug` cookie exists, redirect to that menu.
+    - Otherwise render a small form to enter the slug.
+    """
+
+    candidate = (slug or "").strip() or (request.cookies.get("restaurant_slug") or "").strip()
+    if candidate:
+        return RedirectResponse(url=f"/menu/{candidate}", status_code=303)
+
+    restaurants = list_public_restaurants()
+
+    return templates.TemplateResponse(
+        "public/menu_index.html",
+        {
+            "request": request,
+            "restaurants": restaurants,
+            "selected_slug": (slug or "").strip(),
+        }
+    )
 
 
 @router.get("/menu/{slug}", response_class=HTMLResponse)

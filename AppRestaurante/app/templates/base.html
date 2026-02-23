@@ -30,7 +30,14 @@
           <ul class="navbar-nav ms-auto align-items-lg-center">
             {# Show private navigation if user is authenticated (context from middleware or cookies) #}
             {% set is_authenticated = user_id or request.cookies.get('access_token') %}
-            {% if is_authenticated %}
+            {% set nav_restaurant_slug = restaurant_slug or request.cookies.get('restaurant_slug') %}
+
+            {# Public navigation (logged out) #}
+            {% if not is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="/menu">Menú Público</a>
+            </li>
+            {% else %}
             <li class="nav-item">
               <a class="nav-link active" href="/">Inicio</a>
             </li>
@@ -42,7 +49,6 @@
               <a class="nav-link" href="/platos">Platos</a>
             </li>
             <!-- Menú Público -->
-            {% set nav_restaurant_slug = restaurant_slug or request.cookies.get('restaurant_slug') %}
             {% if nav_restaurant_slug %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="menuPublicoDropdown" role="button"
