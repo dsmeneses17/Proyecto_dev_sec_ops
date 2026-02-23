@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from app.routers import public_menu
+from app.routers import register_owner
 from.utils.templates import get_template_context
 from app.core.config import settings
 from app.ui.templates import templates
@@ -26,7 +27,15 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
 # Public paths that shouldn't require JWT cookies.
-PUBLIC_PATHS = ["/", "/static", "/favicon.ico", "/api/v1/auth/login", "/api/v1/auth/logout"]
+PUBLIC_PATHS = [
+    "/",
+    "/static",
+    "/favicon.ico",
+    "/api/v1/auth/login",
+    "/api/v1/auth/logout",
+    "/registro",
+    "/menu",
+]
 # Plantillas HTML (shared)
 
 @app.get("/", response_class=HTMLResponse)
@@ -114,12 +123,17 @@ async def jwt_middleware(request: Request, call_next):
         return RedirectResponse(url="/", status_code=303)
 
     try:
-        #breakpoint()
         payload = decode_token(token)
-        #request.state.user = payload.get("sub")
         request.state.user = payload
     except Exception:
-        return RedirectResponse(url="/", status_code=303)
+        # Token invalid/expired -> clear cookies so we don't loop and send to login
+        redirect = RedirectResponse(url="/", status_code=303)
+        redirect.delete_cookie("access_token")
+        redirect.delete_cookie("rol")
+        redirect.delete_cookie("user_id")
+        redirect.delete_cookie("restaurant_id")
+        redirect.delete_cookie("restaurant_slug")
+        return redirect
 
     return await call_next(request)
 
@@ -129,6 +143,7 @@ app.include_router(restaurant.router, prefix="/restaurants", tags=["restaurantes
 app.include_router(category.router, prefix="/categories", tags=["categorias"])
 app.include_router(dish.router, prefix="/platos", tags=["platos"])  
 app.include_router(public_menu.router)
+app.include_router(register_owner.router)
 
 
 

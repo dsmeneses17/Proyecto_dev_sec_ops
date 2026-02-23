@@ -13,6 +13,10 @@ from jose import JWTError, jwt
 from app.models.restaurant import Restaurant
 
 
+def _slugify_like(value: str) -> str:
+    return (value or "").strip().lower()
+
+
 router = APIRouter()
 
 
@@ -84,6 +88,66 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return {"message": "Usuario registrado"}
+
+
+@router.post("/register-owner")
+def register_owner(payload: dict, db: Session = Depends(get_db)):
+    """Register a new restaurant owner (admin) plus their restaurant."""
+
+    required = [
+        "nombre_completo",
+        "usuario",
+        "email",
+        "password",
+        "restaurant_nombre",
+        "restaurant_slug",
+    ]
+    missing = [k for k in required if not (payload.get(k) or "").strip()]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Faltan campos: {', '.join(missing)}")
+
+    usuario = payload["usuario"].strip()
+    email = payload["email"].strip()
+    email_lc = email.lower()
+    restaurant_slug = _slugify_like(payload["restaurant_slug"])
+
+    if db.query(User).filter(User.usuario == usuario).first():
+        raise HTTPException(status_code=400, detail="Usuario ya existe")
+    if db.query(User).filter(User.email.ilike(email_lc)).first():
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+    if db.query(Restaurant).filter(Restaurant.slug == restaurant_slug).first():
+        raise HTTPException(status_code=400, detail="Slug de restaurante ya existe")
+
+    new_user = User(
+        nombre_completo=payload["nombre_completo"].strip(),
+        usuario=usuario,
+        email=email,
+        password=hash_password(payload["password"]),
+        rol="admin",
+        activo=True,
+    )
+    db.add(new_user)
+    db.flush()  # get user id
+
+    new_restaurant = Restaurant(
+        nombre=payload["restaurant_nombre"].strip(),
+        slug=restaurant_slug,
+        telefono=(payload.get("restaurant_telefono") or None),
+        direccion=(payload.get("restaurant_direccion") or None),
+        admin_id=new_user.id,
+    )
+    db.add(new_restaurant)
+
+    db.commit()
+    db.refresh(new_user)
+    db.refresh(new_restaurant)
+
+    return {
+        "message": "Registro completado",
+        "user_id": str(new_user.id),
+        "restaurant_id": str(new_restaurant.id),
+        "restaurant_slug": new_restaurant.slug,
+    }
 
 @router.post("/refresh")
 def refresh_token(refresh_token: str):

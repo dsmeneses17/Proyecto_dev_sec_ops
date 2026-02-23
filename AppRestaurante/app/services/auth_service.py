@@ -28,3 +28,26 @@ def autenticar_usuario(usuario: str, password: str):
         "restaurant_id": restaurant_id,
         "restaurant_slug": restaurant_slug
     }
+
+
+def register_owner_with_restaurant(data: dict):
+    """Register a new restaurant owner (admin) and their restaurant."""
+
+    try:
+        resp = requests.post(
+            f"{settings.BACKEND_URL}auth/register-owner",
+            json=data,
+            timeout=15,
+        )
+
+        if resp.status_code != 200:
+            detail = None
+            try:
+                detail = resp.json().get("detail")
+            except Exception:
+                detail = resp.text
+            return {"error": detail or "No se pudo completar el registro"}
+
+        return resp.json()
+    except Exception:
+        return {"error": "No se pudo conectar al servidor"}
