@@ -69,20 +69,28 @@
               </div>
             </div>
 
-            <!-- Botón editar -->
-            <button class="btn-editar"
-              data-id="{{ plato.id }}"
-              data-nombre="{{ plato.nombre }}"
-              data-descripcion="{{ plato.descripcion }}"
-              data-precio="{{ plato.precio }}"
-              data-precio_oferta="{{ plato.precio_oferta }}"
-              data-categoria="{{ cat.id }}"
-              data-disponible="{{ plato.disponible }}"
-              data-destacado="{{ plato.destacado }}"
-              data-etiquetas="{{ plato.etiquetas | join(', ') if plato.etiquetas }}"
-              data-posicion="{{ plato.posicion }}">
-              ✏️
-            </button>
+            <!-- Botones editar, toggle disponibilidad y eliminar -->
+            <div class="plato-actions">
+              <button class="btn-editar"
+                data-id="{{ plato.id }}"
+                data-nombre="{{ plato.nombre }}"
+                data-descripcion="{{ plato.descripcion }}"
+                data-precio="{{ plato.precio }}"
+                data-precio_oferta="{{ plato.precio_oferta }}"
+                data-categoria="{{ cat.id }}"
+                data-disponible="{{ plato.disponible }}"
+                data-destacado="{{ plato.destacado }}"
+                data-etiquetas="{{ plato.etiquetas | join(', ') if plato.etiquetas }}"
+                data-posicion="{{ plato.posicion }}">
+                ✏️ Editar
+              </button>
+              <button class="btn-toggle-disponibilidad" data-id="{{ plato.id }}" data-disponible="{{ plato.disponible }}">
+                {% if plato.disponible %}👁️ Desactivar{% else %}❌ Activar{% endif %}
+              </button>
+              <button class="btn-eliminar" data-id="{{ plato.id }}">
+                🗑️ Eliminar
+              </button>
+            </div>
 
           </div>
           {% endfor %}
@@ -205,6 +213,40 @@ document.addEventListener("DOMContentLoaded", function() {
       posicion.value = btn.dataset.posicion || "";
 
       modal.style.display = "block";
+    });
+  });
+
+  // ELIMINAR PLATO
+  const btnEliminar = document.querySelectorAll(".btn-eliminar");
+  btnEliminar.forEach(btn => {
+    btn.addEventListener("click", function() {
+      const platoId = btn.dataset.id;
+      const platNombre = btn.closest(".plato-card").querySelector("h3").textContent;
+      
+      if (confirm(`¿Deseas eliminar el plato "${platNombre}"? Esta acción no se puede deshacer.`)) {
+        // Hacer POST a la ruta de eliminación
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/platos/eliminar/${platoId}`;
+        document.body.appendChild(form);
+        form.submit();
+      }
+    });
+  });
+
+  // TOGGLE DISPONIBILIDAD
+  const btnToggleDisponibilidad = document.querySelectorAll(".btn-toggle-disponibilidad");
+  btnToggleDisponibilidad.forEach(btn => {
+    btn.addEventListener("click", function() {
+      const platoId = btn.dataset.id;
+      const platNombre = btn.closest(".plato-card").querySelector("h3").textContent;
+      
+      // Hacer POST a la ruta de toggle
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/platos/toggle_availability/${platoId}`;
+      document.body.appendChild(form);
+      form.submit();
     });
   });
 

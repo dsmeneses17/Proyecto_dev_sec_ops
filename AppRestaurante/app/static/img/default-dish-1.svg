@@ -1,0 +1,16 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg { fill: #f0f0f0; }
+      .icon { fill: #999; }
+      .text { fill: #666; font-family: Arial, sans-serif; font-size: 18px; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect class="bg" width="300" height="200"/>
+  <g transform="translate(150, 60)">
+    <circle class="icon" cx="0" cy="0" r="40"/>
+    <ellipse class="icon" cx="0" cy="28" rx="50" ry="12"/>
+    <path class="icon" d="M -30 -5 Q -30 -25 0 -35 Q 30 -25 30 -5" stroke="#999" stroke-width="2" fill="none"/>
+  </g>
+  <text class="text" x="150" y="165">Sin imagen</text>
+</svg>

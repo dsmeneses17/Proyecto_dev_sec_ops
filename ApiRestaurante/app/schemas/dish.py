@@ -3,6 +3,7 @@ from typing import Optional, List
 from typing_extensions import Annotated
 from uuid import UUID
 from decimal import Decimal
+from datetime import datetime
 
 class DishBase(BaseModel):
     nombre: str = Field(..., max_length=100)
@@ -24,9 +25,9 @@ class DishUpdate(DishBase):
 
 class DishOut(DishBase):
     id: UUID
-    creado_en: Optional[str]
-    actualizado_en: Optional[str]
-    eliminado_en: Optional[str]
+    creado_en: Optional[datetime]
+    actualizado_en: Optional[datetime]
+    eliminado_en: Optional[datetime]
 
     class Config:
         from_attributes = True  # en Pydantic v2, reemplaza orm_mode

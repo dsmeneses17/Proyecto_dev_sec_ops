@@ -79,7 +79,8 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
     for cat in categorias:
         platos = db.query(Dish).filter(
             Dish.categoria_id == cat.id,
-            Dish.disponible == True
+            Dish.disponible == True,
+            Dish.eliminado_en == None
         ).order_by(Dish.posicion.asc()).all()
 
         if not platos:
