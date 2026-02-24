@@ -8,7 +8,7 @@ class CategoriaBase(BaseModel):
     descripcion: Optional[str] = Field(None, description="Descripción opcional")
     posicion: int = Field(..., description="Posición usada para ordenamiento")
     activa: Optional[bool] = Field(default=True, description="Si la categoría está activa")
-    restaurante_id: Optional[UUID] = None  # 👈 NO obligatorio
+    restaurante_id: Optional[UUID] = None  
 
 class CategoriaCreate(CategoriaBase):
     restaurante_id: Optional[UUID] = None

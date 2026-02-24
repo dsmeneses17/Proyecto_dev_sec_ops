@@ -3,16 +3,16 @@ from app.core.config import settings
 from app.core.security import decode_token
 
 def autenticar_usuario(usuario: str, password: str):
-    # 1️⃣ Login al backend
+    # Login al backend
     login_resp = requests.post(
         f"{settings.BACKEND_URL}auth/login",
         json={"usuario": usuario, "password": password}
     )
 
     if login_resp.status_code != 200:
-        return {"error": "❌ Credenciales inválidas"}
+        return {"error": "Credenciales inválidas"}
 
-    # 2️⃣ Usar SOLO la respuesta del backend
+    # Usar SOLO la respuesta del backend
     login_data = login_resp.json()
 
     token = login_data["access_token"].strip()  # ← solo limpiar espacios

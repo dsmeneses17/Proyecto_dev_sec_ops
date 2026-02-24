@@ -20,7 +20,7 @@ router = APIRouter(tags=["categorias"])
 
 @router.get("", response_class=HTMLResponse)
 def listar(request: Request):
-    token = request.cookies.get("access_token")  # ❌ Leer cookie exacta
+    token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
 
@@ -54,7 +54,7 @@ def listar_categorias_json(request: Request):
 
 @router.get("/{categoria_id}", response_class=HTMLResponse)
 def editar_form(request: Request, categoria_id: str):
-    print("🚀📄📡 LLEGO A CATEGORIA:")
+    print("LLEGO A CATEGORIA:")
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
@@ -68,7 +68,7 @@ def editar_form(request: Request, categoria_id: str):
             "request": request,
             "categorias": categorias,
             "categoria": categoria,
-            **get_template_context(request)  # 👈 para llenar el formulario
+            **get_template_context(request)  
         }
     )
 
@@ -94,7 +94,7 @@ def crear(
         "descripcion": descripcion,
         "posicion": posicion,
         "activa": activa,
-        "restaurante_id": restaurante_id  # 🔑 ahora sí se envía
+        "restaurante_id": restaurante_id  
     }
     
 

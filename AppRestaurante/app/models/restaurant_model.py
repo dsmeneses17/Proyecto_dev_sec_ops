@@ -12,7 +12,7 @@ class RestaurantBase(BaseModel):
     logo: Optional[HttpUrl] = None
 
 class RestaurantCreate(RestaurantBase):
-    id: Optional[UUID] = None  # <-- opcional para crear/update
+    id: Optional[UUID] = None  
 
 
 class RestaurantUpdate(BaseModel):
@@ -29,6 +29,6 @@ class RestaurantOut(RestaurantBase):
     id: UUID   # <-- corregido
 
     model_config = { 
-        "from_attributes": True,     # reemplaza orm_mode en Pydantic v2 
-        "json_encoders": {UUID: str} # ✅ convierte UUID a string automáticamente 
+        "from_attributes": True,     
+        "json_encoders": {UUID: str} # UUID a string automáticamente 
     }

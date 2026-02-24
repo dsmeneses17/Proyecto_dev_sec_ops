@@ -34,7 +34,7 @@ def list_dishes(token: str, categoria_id: str = None):
             }
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.error("❌ Error al conectar con backend: %s", e)
+        logging.error("Error al conectar con backend: %s", e)
         return {"error": True, "detalle": str(e), "status_code": None}
 
 
@@ -46,7 +46,7 @@ def get_dish(token: str, dish_id: str):
             return {"error": True, "detalle": response.text, "status_code": response.status_code}
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.error("❌ Error al conectar con backend: %s", e)
+        logging.error("Error al conectar con backend: %s", e)
         return {"error": True, "detalle": str(e), "status_code": None}
 
 
@@ -82,7 +82,7 @@ def delete_dish(token: str, dish_id: str):
             return {"error": True, "detalle": response.text, "status_code": response.status_code}
         return {"deleted": True}
     except requests.exceptions.RequestException as e:
-        logging.error("❌ Error al conectar con backend: %s", e)
+        logging.error("Error al conectar con backend: %s", e)
         return {"error": True, "detalle": str(e), "status_code": None}
 
 
@@ -94,5 +94,5 @@ def toggle_availability(token: str, dish_id: str):
             return {"error": True, "detalle": response.text, "status_code": response.status_code}
         return response.json()
     except requests.exceptions.RequestException as e:
-        logging.error("❌ Error al conectar con backend: %s", e)
+        logging.error("Error al conectar con backend: %s", e)
         return {"error": True, "detalle": str(e), "status_code": None}

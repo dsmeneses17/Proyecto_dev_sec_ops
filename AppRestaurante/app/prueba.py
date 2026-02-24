@@ -28,10 +28,10 @@ def enviar_restaurante(data: RestaurantCreate, token: str):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
-        print("❌ Error HTTP:", e, response.text)
+        print("Error HTTP:", e, response.text)
         return {"error": True, "detalle": response.text}
     except Exception as e:
-        print("❌ Error inesperado:", e)
+        print("Error inesperado :", e)
         return {"error": True, "detalle": str(e)}
 
 

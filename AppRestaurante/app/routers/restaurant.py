@@ -25,16 +25,14 @@ def get_headers(token: str):
 
 @router.get("/")
 def mostrar_dashboard_restaurante(request: Request):
-    # 🔹 Obtener token y rol de cookies
-    #breakpoint()
+    # Obtener token y rol de cookies
     token = request.cookies.get("access_token")
     rol = request.cookies.get("rol")
     restaurant_id = request.cookies.get("restaurant_id")
     if not token or rol != "admin":
-        # No autorizado → login
         return RedirectResponse(url="/", status_code=303)
 
-    # 🔹 Llamar a la API para obtener los datos del restaurante del admin
+    # Llamar a la API para obtener los datos del restaurante del admin
     try:
         resp = requests.get(
             f"{settings.BACKEND_URL}admin/restaurants/restaurant/{restaurant_id}",
@@ -62,7 +60,7 @@ def mostrar_dashboard_restaurante(request: Request):
             { "error": f"Error {resp.status_code} al obtener datos", **get_template_context(request)}
         )
 
-    # 🔹 API respondió correctamente
+    # API respondió correctamente
     data = resp.json()
     # Si la API devuelve una lista, tomar el primer elemento
     restaurant_data = data[0] if isinstance(data, list) and len(data) > 0 else data
@@ -132,7 +130,7 @@ def create_restaurant(
 
 
 
-    # 🔥 NORMALIZAR AQUÍ
+    # NORMALIZAR AQUÍ
     if restaurant_id in ["None", "", None]:
         restaurant_id = None
 
@@ -153,7 +151,7 @@ def create_restaurant(
     if "error" in resultado:
         raise HTTPException(status_code=200, detail=resultado)
 
-    return resultado  # 👉 devuelve JSON con el restaurante creado
+    return resultado  # devuelve JSON con el restaurante creado
 
 
 

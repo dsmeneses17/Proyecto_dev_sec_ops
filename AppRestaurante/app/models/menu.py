@@ -10,7 +10,7 @@ class DishPublic(BaseModel):
     precio_oferta: Optional[float]
     imagen_url: Optional[str]
     destacado: Optional[bool]
-    # Backend may return etiquetas as a list (e.g. ['no'] or ['Ajiaco']).
+    # Backend may return etiquetas as a list
     etiquetas: Optional[Union[str, List[str]]]
 
 

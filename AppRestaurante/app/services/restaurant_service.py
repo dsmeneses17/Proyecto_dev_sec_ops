@@ -18,14 +18,14 @@ def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
             return {"error": True, "detalle": "Token inválido"}
         token = "".join(token.split())
 
-    # 🔥 IMPORTANTE: usar mode="json"
+    # IMPORTANTE: usar mode="json"
     payload = data.model_dump(mode="json", exclude_none=True)
 
-    # 🔥 Normalizar ID si vino como string "None"
+    # Normalizar ID si vino como string "None"
     if payload.get("id") in ["None", "", None]:
         payload.pop("id", None)
 
-    # 🔹 Asegurarse de que horarios sea un dict
+    # Asegurarse de que horarios sea un dict
     if "horarios" in payload:
         try:
             # si es string, parsear como JSON
@@ -49,12 +49,12 @@ def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
         return response.json()
 
     except requests.exceptions.ConnectionError as e:
-        logging.error("❌ Error de conexión con el backend: %s", e)
+        logging.error("Error de conexión con el backend: %s", e)
         return {"error": True, "detalle": "No se pudo conectar al backend"}
 
     except requests.exceptions.HTTPError as e:
         logging.error(
-            "❌ Error HTTP: %s - %s",
+            "Error HTTP: %s - %s",
             e,
             response.text if 'response' in locals() else ""
         )
@@ -65,5 +65,5 @@ def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
         }
 
     except Exception as e:
-        logging.error("❌ Error inesperado: %s", e)
+        logging.error("Error inesperado: %s", e)
         return {"error": True, "detalle": str(e)}

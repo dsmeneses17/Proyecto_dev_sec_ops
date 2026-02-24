@@ -39,7 +39,7 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
     restaurant_slug = resultado["restaurant_slug"]
     user_id = resultado.get("user_id")
     #breakpoint()
-    # 🔹 Admin con restaurante registrado → editar restaurante
+    #Admin con restaurante registrado → editar restaurante
     if rol == "admin":
         redirect = RedirectResponse(url="/restaurants", status_code=303)
         redirect.set_cookie("access_token", token, httponly=True, secure=False, path="/")
@@ -51,7 +51,7 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
 
    
 
-    # 🔹 Cliente → dashboard cliente
+    # Cliente → dashboard cliente
     if rol == "cliente":
         redirect = RedirectResponse(url="/cliente_dashboard.html", status_code=303)
         redirect.set_cookie("access_token", token, httponly=True, secure=True)
@@ -62,7 +62,7 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
         
         return redirect
 
-    # 🔹 Otros roles (opcional)
+    # Otros roles 
     redirect = RedirectResponse(url="/", status_code=303)
     redirect.set_cookie("access_token", token, httponly=True, secure=True)
     redirect.set_cookie("rol", rol)

@@ -15,7 +15,7 @@ async def get_current_user(authorization: str = Header(...)):
 
         payload = decode_token(token)
         username: str = payload.get("sub")
-        role: str = payload.get("role")   # 👈 aquí extraemos el rol
+        role: str = payload.get("role")   #aquí extraemos el rol
 
         if username is None or role is None:
             raise HTTPException(status_code=401, detail="Token inválido")

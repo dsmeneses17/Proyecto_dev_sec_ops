@@ -9,5 +9,4 @@ class User:
     
 def get_user_by_credentials(usuario: str, password: str):
     # Esta función ya no se usa si estás consultando al backend externo.
-    # Puedes dejarla vacía o eliminar la importación en auth.py si no se usa.
     return None
