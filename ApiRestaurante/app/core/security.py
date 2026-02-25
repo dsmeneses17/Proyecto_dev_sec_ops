@@ -15,7 +15,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # app/core/security.py
 
-# 🚨 Función temporal para debug
+#Función temporal para debug
 async def oauth2_scheme_debug(token: str = Depends(oauth2_scheme)):
     print("Token recibido en oauth2_scheme_debug:", token)
     return token

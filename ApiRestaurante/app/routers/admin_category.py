@@ -43,7 +43,7 @@ async def get_category(
     user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 1️⃣ Buscar restaurante del admin autenticado
+    # Buscar restaurante del admin autenticado
     restaurant = db.query(Restaurant).filter(
         Restaurant.admin_id == user["id"]
     ).first()
@@ -51,7 +51,7 @@ async def get_category(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
 
-    # 2️⃣ Buscar la categoría que pertenezca a ese restaurante
+    # Buscar la categoría que pertenezca a ese restaurante
     categoria = db.query(Category).filter(
         Category.id == category_id,
         Category.restaurante_id == restaurant.id

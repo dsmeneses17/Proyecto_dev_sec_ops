@@ -46,7 +46,7 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
 
     cache_key = f"public_menu:{slug}"
 
-    # 🔥 1️⃣ Cache Hit (optional)
+    # Cache Hit 
     try:
         cached = redis_client.get(cache_key)
         if cached:
@@ -54,7 +54,7 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
     except RedisError:
         cached = None
 
-    # 🔍 2️⃣ Cache Miss → consulta BD
+    # Cache Miss → consulta BD
     restaurant = db.query(Restaurant).filter(
         Restaurant.slug == slug
     ).first()
@@ -104,7 +104,7 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
             ]
         })
 
-    # 💾 Guardar en cache por 5 minutos (optional)
+    # Guardar en cache por 5 minutos 
     try:
         redis_client.setex(cache_key, 300, json.dumps(response))
     except (RedisError, TypeError):

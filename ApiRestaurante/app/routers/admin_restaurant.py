@@ -53,7 +53,7 @@ def get_restaurant_by_id(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
 
-    # Opcional: restringir acceso solo al admin dueño del restaurante
+    #restringir acceso solo al admin dueño del restaurante
     if restaurant.admin_id != user["id"] and user["rol"].lower() != "admin":
         raise HTTPException(status_code=403, detail="No autorizado para ver este restaurante")
 
@@ -71,7 +71,7 @@ def create_or_update_restaurant(
     if user["rol"].lower() != "admin":
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    # 🔥 Convertimos todo a formato JSON serializable
+    # Convertimos todo a formato JSON serializable
     data_dict = data.model_dump(mode="json")  
     # Esto convierte automáticamente UUID y HttpUrl a str
 
@@ -96,7 +96,7 @@ def create_or_update_restaurant(
         db.refresh(restaurant)
         return restaurant
 
-    # 🔹 CREATE
+    # CREATE
     existing = db.query(Restaurant).filter(
         Restaurant.admin_id == user["id"]
     ).first()
