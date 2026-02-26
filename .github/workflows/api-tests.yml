@@ -47,10 +47,10 @@ jobs:
           pip install pytest pytest-asyncio
 
       - name: Run service unit tests (fast)
-        run: python -m pytest tests/test_services_*.py
+        run: python -m pytest -q -rA --disable-warnings tests/test_services_*.py
 
       - name: Run repository tests (Postgres)
-        run: python -m pytest tests/test_repositories_*.py
+        run: python -m pytest -q -rA --disable-warnings tests/test_repositories_*.py
 
   apprestaurante-pytest:
     runs-on: ubuntu-latest
@@ -75,4 +75,4 @@ jobs:
           pip install pytest
 
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest -q -rA --disable-warnings
