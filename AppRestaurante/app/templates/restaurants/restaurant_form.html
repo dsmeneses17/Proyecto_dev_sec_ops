@@ -14,8 +14,10 @@
   <label for="slug">Slug (URL amigable):</label>
   <input readonly type="text" id="slug" name="slug" required value="{{ restaurant.slug if restaurant else '' }}">
 
-  <label for="logo">Logo (URL):</label>
-  <input type="url" id="logo" name="logo" required value="{{ restaurant.logo if restaurant else '' }}">
+  <label for="logoFile">Logo (JPEG, PNG o WebP - máx. 5MB):</label>
+  <input type="file" id="logoFile" accept="image/jpeg,image/png,image/webp">
+  <input type="hidden" id="logo" name="logo" value="{{ restaurant.logo if restaurant else '' }}">
+  <small id="logoUploadStatus">{% if restaurant and restaurant.logo %}Logo actual: {{ restaurant.logo }}{% endif %}</small>
 
   <label for="descripcion">Descripción:</label>
   <input type="text" id="descripcion" name="descripcion" value="{{ restaurant.descripcion if restaurant else '' }}">
@@ -115,11 +117,81 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("restaurantForm");
   const horariosText = document.getElementById("horariosText");
   const horariosInput = document.getElementById("horariosInput");
+  const logoFileInput = document.getElementById("logoFile");
+  const logoInput = document.getElementById("logo");
+  const logoUploadStatus = document.getElementById("logoUploadStatus");
+  const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+  const maxImageSize = 5 * 1024 * 1024;
+  let logoUploading = false;
+
+  function validarImagen(file) {
+    if (!allowedImageTypes.includes(file.type)) {
+      return "Formato inválido. Solo se permite JPEG, PNG o WebP.";
+    }
+    if (file.size > maxImageSize) {
+      return "El archivo supera el máximo de 5MB.";
+    }
+    return null;
+  }
+
+  async function subirImagen(file, target) {
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+
+    const uploadResp = await fetch(`/uploads/image?target=${encodeURIComponent(target)}`, {
+      method: "POST",
+      body: uploadData
+    });
+
+    const uploadJson = await uploadResp.json().catch(() => ({}));
+    if (!uploadResp.ok || !uploadJson.url) {
+      throw new Error(uploadJson.detail || "No fue posible subir la imagen.");
+    }
+    return uploadJson.url;
+  }
+
+  logoFileInput.addEventListener("change", async () => {
+    const file = logoFileInput.files[0];
+    if (!file) {
+      return;
+    }
+
+    const errorValidacion = validarImagen(file);
+    if (errorValidacion) {
+      logoFileInput.value = "";
+      logoUploadStatus.innerText = errorValidacion;
+      return;
+    }
+
+    try {
+      logoUploading = true;
+      logoUploadStatus.innerText = "Subiendo logo...";
+      const uploadedUrl = await subirImagen(file, "logo");
+      logoInput.value = uploadedUrl;
+      logoUploadStatus.innerText = `Logo cargado: ${uploadedUrl}`;
+    } catch (error) {
+      logoFileInput.value = "";
+      logoUploadStatus.innerText = error.message || "Error al subir el logo.";
+    } finally {
+      logoUploading = false;
+    }
+  });
 
   
   
   form.addEventListener("submit", async function(e) {
     e.preventDefault();
+
+    if (logoUploading) {
+      logoUploadStatus.innerText = "Espere a que termine la carga del logo.";
+      return;
+    }
+
+    if (!logoInput.value) {
+      logoUploadStatus.innerText = "Debe subir un logo antes de guardar.";
+      return;
+    }
+
     let parsedHorarios = {};
     const rawText = horariosText.value.trim();
 

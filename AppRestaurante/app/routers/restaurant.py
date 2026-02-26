@@ -111,7 +111,7 @@ def create_restaurant(
     request: Request,
     nombre: str = Form(...),
     slug: str = Form(...),
-    logo: str = Form(...),
+    logo: str = Form(""),
     descripcion: str = Form(None),
     telefono: str = Form(None),
     direccion: str = Form(None),
@@ -121,6 +121,10 @@ def create_restaurant(
     restaurant_id = request.cookies.get("restaurant_id")
     if not token:
         raise HTTPException(status_code=200, detail="Token requerido")
+
+    logo = (logo or "").strip()
+    if not logo:
+        raise HTTPException(status_code=400, detail="Debe cargar el logo del restaurante")
 
     # convertir horarios si es JSON válido
     try:

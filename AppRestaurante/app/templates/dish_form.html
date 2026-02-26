@@ -73,6 +73,7 @@
                 data-descripcion="{{ plato.descripcion }}"
                 data-precio="{{ plato.precio }}"
                 data-precio_oferta="{{ plato.precio_oferta }}"
+                data-imagen_url="{{ plato.imagen_url if plato.imagen_url else '' }}"
                 data-categoria="{{ cat.id }}"
                 data-disponible="{{ plato.disponible }}"
                 data-destacado="{{ plato.destacado }}"
@@ -128,6 +129,11 @@
       <label>Precio Oferta</label>
       <input type="number" step="0.01" name="precio_oferta" id="precio_oferta">
 
+      <label>Imagen (JPEG, PNG o WebP - máx. 5MB)</label>
+      <input type="file" id="imagenFile" accept="image/jpeg,image/png,image/webp">
+      <input type="hidden" name="imagen_url" id="imagen_url">
+      <small id="imagenUploadStatus"></small>
+
       <label>Categoría</label>
       <select name="categoria_id" id="categoria_id" required>
         {% for cat in categorias %}
@@ -179,6 +185,38 @@ document.addEventListener("DOMContentLoaded", function() {
   const destacado = document.getElementById("destacado");
   const etiquetas = document.getElementById("etiquetas");
   const posicion = document.getElementById("posicion");
+  const imagenFile = document.getElementById("imagenFile");
+  const imagenUrl = document.getElementById("imagen_url");
+  const imagenUploadStatus = document.getElementById("imagenUploadStatus");
+  const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+  const maxImageSize = 5 * 1024 * 1024;
+
+  function validarImagen(file) {
+    if (!allowedImageTypes.includes(file.type)) {
+      return "Formato inválido. Solo se permite JPEG, PNG o WebP.";
+    }
+    if (file.size > maxImageSize) {
+      return "El archivo supera el máximo de 5MB.";
+    }
+    return null;
+  }
+
+  async function subirImagen(file, target) {
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+
+    const uploadResp = await fetch(`/uploads/image?target=${encodeURIComponent(target)}`, {
+      method: "POST",
+      body: uploadData
+    });
+
+    const uploadJson = await uploadResp.json().catch(() => ({}));
+    if (!uploadResp.ok || !uploadJson.url) {
+      throw new Error(uploadJson.detail || "No fue posible subir la imagen.");
+    }
+
+    return uploadJson.url;
+  }
 
   // ABRIR MODAL NUEVO
   if(btnCrear){
@@ -187,6 +225,8 @@ document.addEventListener("DOMContentLoaded", function() {
       modalTitle.textContent = "Crear Plato";
       form.reset(); // limpia los campos
       plato_id.value = "";
+      imagenUrl.value = "";
+      imagenUploadStatus.innerText = "";
       modal.style.display = "block";
     });
   }
@@ -202,6 +242,9 @@ document.addEventListener("DOMContentLoaded", function() {
       descripcion.value = btn.dataset.descripcion;
       precio.value = btn.dataset.precio;
       precio_oferta.value = btn.dataset.precio_oferta || "";
+      imagenUrl.value = btn.dataset.imagen_url || "";
+      imagenFile.value = "";
+      imagenUploadStatus.innerText = imagenUrl.value ? `Imagen actual: ${imagenUrl.value}` : "";
       categoria_id.value = btn.dataset.categoria;
       disponible.checked = btn.dataset.disponible === "True" || btn.dataset.disponible === "true";
       destacado.checked = btn.dataset.destacado === "True" || btn.dataset.destacado === "true";
@@ -256,6 +299,31 @@ document.addEventListener("DOMContentLoaded", function() {
   window.addEventListener("click", function(e){
     if(e.target === modal){
       modal.style.display = "none";
+    }
+  });
+
+  form.addEventListener("submit", async function(e) {
+    const file = imagenFile.files[0];
+    if (!file) {
+      return;
+    }
+
+    e.preventDefault();
+
+    const errorValidacion = validarImagen(file);
+    if (errorValidacion) {
+      imagenUploadStatus.innerText = errorValidacion;
+      return;
+    }
+
+    try {
+      imagenUploadStatus.innerText = "Subiendo imagen...";
+      const uploadedUrl = await subirImagen(file, "dish");
+      imagenUrl.value = uploadedUrl;
+      imagenUploadStatus.innerText = `Imagen cargada: ${uploadedUrl}`;
+      form.submit();
+    } catch (error) {
+      imagenUploadStatus.innerText = error.message || "Error al subir la imagen.";
     }
   });
 

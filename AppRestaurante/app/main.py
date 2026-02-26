@@ -11,7 +11,7 @@ from app.ui.templates import templates
 
 
 
-from app.routers import auth, restaurant, category, dish
+from app.routers import auth, restaurant, category, dish, upload
 
 
 from app.core.security import decode_token
@@ -140,5 +140,6 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(restaurant.router, prefix="/restaurants", tags=["restaurantes"])
 app.include_router(category.router, prefix="/categories", tags=["categorias"])
 app.include_router(dish.router, prefix="/platos", tags=["platos"])  
+app.include_router(upload.router, prefix="/uploads", tags=["uploads"])
 app.include_router(public_menu.router)
 app.include_router(register_owner.router)
