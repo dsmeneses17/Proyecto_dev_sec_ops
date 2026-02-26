@@ -85,7 +85,6 @@ async def get_dish(
 # Crear plato
 @router.post("/", response_model=DishOut)
 async def create_dish(payload: DishCreate, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    breakpoint()
     new_dish = Dish(**payload.model_dump())
     db.add(new_dish)
     db.commit()
