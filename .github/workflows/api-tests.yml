@@ -46,5 +46,8 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio
 
-      - name: Run tests
-        run: python -m pytest
+      - name: Run service unit tests (fast)
+        run: python -m pytest tests/test_services_*.py
+
+      - name: Run repository tests (Postgres)
+        run: python -m pytest tests/test_repositories_*.py
