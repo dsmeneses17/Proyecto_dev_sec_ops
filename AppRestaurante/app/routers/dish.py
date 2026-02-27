@@ -16,8 +16,21 @@ from app.services.dish_service import (
     delete_dish,
     toggle_availability
 )
+from app.services.storage import build_display_url
 
 router = APIRouter(tags=["platos"])
+
+
+def _sign_dish_images(categorias):
+    if not isinstance(categorias, list):
+        return categorias
+
+    for categoria in categorias:
+        platos = categoria.get("platos", []) if isinstance(categoria, dict) else []
+        for plato in platos:
+            if isinstance(plato, dict) and plato.get("imagen_url"):
+                plato["imagen_url"] = build_display_url(plato["imagen_url"])
+    return categorias
 
 
 @router.get("", response_class=HTMLResponse)
@@ -32,7 +45,7 @@ def listar(request: Request):
         categorias = []
         error = resultado.get("detalle", "Error al cargar platos")
     else:
-        categorias = resultado
+        categorias = _sign_dish_images(resultado)
         error = None
 
     return templates.TemplateResponse(
@@ -61,8 +74,11 @@ def editar_form(request: Request, dish_id: str):
     if "error" in plato_obj:
         raise HTTPException(status_code=400, detail=plato_obj["detalle"])
 
+    if plato_obj.get("imagen_url"):
+        plato_obj["imagen_url"] = build_display_url(plato_obj["imagen_url"])
+
     plato = SimpleNamespace(**plato_obj)
-    categorias = list_dishes(token)
+    categorias = _sign_dish_images(list_dishes(token))
     return templates.TemplateResponse(
         "dish_form.html",
         {
@@ -120,7 +136,7 @@ def crear(
     else:
         resultado = create_dish(token, payload)
 
-    categorias = list_dishes(token)
+    categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(
         "dish_form.html",
@@ -145,7 +161,7 @@ def eliminar(request: Request, dish_id: str):
         raise HTTPException(status_code=401, detail="Token requerido")
 
     resultado = delete_dish(token, dish_id)
-    categorias = list_dishes(token)
+    categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(
         "dish_form.html",
@@ -170,7 +186,7 @@ def toggle(request: Request, dish_id: str):
         raise HTTPException(status_code=401, detail="Token requerido")
 
     resultado = toggle_availability(token, dish_id)
-    categorias = list_dishes(token)
+    categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(
         "dish_form.html",

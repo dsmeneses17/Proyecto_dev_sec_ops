@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
 from app.services.restaurant_service import enviar_a_backend_externo
+from app.services.storage import build_display_url
 from app.core.config import settings
 from app.models.restaurant_model import RestaurantCreate, RestaurantOut   # <-- corregido
 import logging
@@ -64,6 +65,8 @@ def mostrar_dashboard_restaurante(request: Request):
     data = resp.json()
     # Si la API devuelve una lista, tomar el primer elemento
     restaurant_data = data[0] if isinstance(data, list) and len(data) > 0 else data
+    if isinstance(restaurant_data, dict) and restaurant_data.get("logo"):
+        restaurant_data["logo"] = build_display_url(restaurant_data["logo"])
 
     return templates.TemplateResponse(
         "restaurants/restaurant.html",
@@ -99,6 +102,8 @@ def restaurant_form(request: Request):
         )
 
     restaurant_data = resp.json()
+    if isinstance(restaurant_data, dict) and restaurant_data.get("logo"):
+        restaurant_data["logo"] = build_display_url(restaurant_data["logo"])
     print(restaurant_data)
     return templates.TemplateResponse(
         "restaurants/restaurant_form.html",
