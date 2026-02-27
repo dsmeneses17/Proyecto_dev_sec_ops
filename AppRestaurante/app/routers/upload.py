@@ -1,9 +1,9 @@
-from pathlib import Path
 from io import BytesIO
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from PIL import Image, UnidentifiedImageError
+from app.services.storage import StorageConfigurationError, upload_bytes_to_object_storage
 
 
 router = APIRouter(tags=["uploads"])
@@ -35,7 +35,7 @@ def _normalize_image(content: bytes) -> Image.Image:
         raise HTTPException(status_code=400, detail="No se pudo procesar el archivo de imagen.") from exc
 
 
-def _save_variant(base_image: Image.Image, max_size: tuple[int, int], output_path: Path):
+def _render_variant(base_image: Image.Image, max_size: tuple[int, int]) -> bytes:
     variant = base_image.copy()
     variant.thumbnail(max_size, Image.Resampling.LANCZOS)
 
@@ -48,7 +48,9 @@ def _save_variant(base_image: Image.Image, max_size: tuple[int, int], output_pat
     if variant.mode == "RGBA":
         save_kwargs["lossless"] = False
 
-    variant.save(output_path, **save_kwargs)
+    buffer = BytesIO()
+    variant.save(buffer, **save_kwargs)
+    return buffer.getvalue()
 
 
 @router.post("/image")
@@ -79,19 +81,22 @@ async def upload_image(
     safe_target = target if target in ALLOWED_TARGETS else "general"
     source_image = _normalize_image(image_content)
 
-    base_path = Path(__file__).resolve().parents[1] / "static" / "uploads" / str(user_id) / safe_target
-    base_path.mkdir(parents=True, exist_ok=True)
-
     image_id = uuid4().hex
-    relative_urls = {}
+    urls = {}
     for variant_name, variant_size in IMAGE_VARIANTS.items():
         filename = f"{image_id}_{variant_name}{OUTPUT_EXTENSION}"
-        filepath = base_path / filename
-        _save_variant(source_image, variant_size, filepath)
-        relative_urls[variant_name] = f"/static/uploads/{user_id}/{safe_target}/{filename}"
-
-    base_url = str(request.base_url).rstrip("/")
-    urls = {name: f"{base_url}{path}" for name, path in relative_urls.items()}
+        object_name = f"uploads/{user_id}/{safe_target}/{filename}"
+        variant_content = _render_variant(source_image, variant_size)
+        try:
+            urls[variant_name] = upload_bytes_to_object_storage(
+                content=variant_content,
+                object_name=object_name,
+                content_type="image/webp",
+            )
+        except StorageConfigurationError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return {
         "url": urls["medium"],
