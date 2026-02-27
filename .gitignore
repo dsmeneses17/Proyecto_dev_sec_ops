@@ -30,6 +30,16 @@ env/
 .idea/
 .vscode/
 
+# Virtual environments (should never be committed)
+venv/
+.venv/
+**/venv/
+**/.venv/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+
 # ---- Node (there is a package.json in the repo) ----
 node_modules/
 npm-debug.log*
@@ -43,6 +53,12 @@ pnpm-debug.log*
 # ---- Secrets / env files ----
 .env
 .env.*
+!.env.example
+
+# ---- Compiled Python artifacts anywhere (extra safety) ----
+*.pyc
+*.pyo
+*.pyd
 
 # ---- Local DB dumps / backups ----
 *.dump
