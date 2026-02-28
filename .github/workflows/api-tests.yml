@@ -10,17 +10,23 @@ jobs:
     name: ApiRestaurante — pytest (services + repositories + API contract)
     runs-on: ubuntu-latest
 
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
+      DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
+
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 1234
-          POSTGRES_DB: Restaurante_test
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d Restaurante_test"
+          --health-cmd="pg_isready -U ${{ secrets.POSTGRES_USER }} -d ${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -29,9 +35,6 @@ jobs:
       run:
         shell: bash
         working-directory: ApiRestaurante
-
-    env:
-      DATABASE_URL: postgresql+psycopg2://postgres:1234@localhost:5432/Restaurante_test
 
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +106,12 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Boot app (docker compose)
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          # Inside docker compose, the DB hostname is the service name: postgres_db
+          DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres_db:5432/${{ vars.POSTGRES_DB }}
         run: docker compose up -d --build
 
       - name: Wait for frontend

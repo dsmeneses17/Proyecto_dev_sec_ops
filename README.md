@@ -75,7 +75,14 @@ docker compose down -v
 
 ## Variables de entorno
 
-`docker-compose.yml` ya define valores base para backend y base de datos.
+La configuración se toma desde variables de entorno (recomendado: archivo `.env` local). **No se incluyen credenciales por defecto** en el repositorio.
+
+Variables obligatorias para la base de datos (usadas por `postgres_db` y `ApiRestaurante`):
+
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `DATABASE_URL` (por ejemplo: `postgresql+psycopg2://<user>:<pass>@postgres_db:5432/<db>` dentro de docker compose, o `@localhost:5432/` para ejecutar tests localmente)
 
 Variables obligatorias para Object Storage (S3-compatible) consumidas por `AppRestaurante`:
 
@@ -92,6 +99,11 @@ Puedes definirlas en un archivo `.env` en la raíz (junto a `docker-compose.yml`
 Ejemplo:
 
 ```env
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+DATABASE_URL=
+
 S3_BUCKET_NAME=mi-bucket
 S3_REGION=us-east-1
 S3_ENDPOINT_URL=
@@ -106,15 +118,17 @@ AWS_SECRET_ACCESS_KEY=
 
 ## Backend tests
 
-Requiere BD de pruebas accesible y variable `DATABASE_URL` apuntando a `Restaurante_test`.
+Requiere BD de pruebas accesible y variable `DATABASE_URL`.
 
 PowerShell (ejemplo):
 
 ```powershell
 cd ApiRestaurante
-$env:DATABASE_URL = "postgresql+psycopg2://postgres:1234@localhost:5432/Restaurante_test"
+$env:DATABASE_URL = "postgresql+psycopg2://<user>:<pass>@localhost:5432/<db_name>"
 pytest
 ```
+
+Puedes definir `DATABASE_URL` (y variables Postgres para `docker-compose`) en un archivo `.env` en la raíz (junto a `docker-compose.yml`).
 
 ## Frontend tests
 

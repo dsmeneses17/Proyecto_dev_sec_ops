@@ -1,8 +1,16 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Cambia usuario, contraseña, host, puerto y nombre_db según tu configuración
-DATABASE_URL = "postgresql+psycopg2://postgres:1234@postgres_db:5432/Restaurante"
+
+# Require DATABASE_URL from env (.env / GitHub Actions).
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+	raise RuntimeError(
+		"DATABASE_URL is not set. Set it via your local .env file or GitHub Actions secrets/vars."
+	)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
