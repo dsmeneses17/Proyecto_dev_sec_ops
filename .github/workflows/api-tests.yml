@@ -6,7 +6,8 @@ on:
   pull_request:
 
 jobs:
-  pytest:
+  apirestaurante-pytest:
+    name: ApiRestaurante — pytest (services + repositories + API contract)
     runs-on: ubuntu-latest
 
     services:
@@ -56,6 +57,7 @@ jobs:
         run: python -m pytest -q -rA --disable-warnings tests/test_api_*.py
 
   apprestaurante-pytest:
+    name: AppRestaurante — pytest
     runs-on: ubuntu-latest
 
     defaults:
@@ -81,6 +83,7 @@ jobs:
         run: python -m pytest -q -rA --disable-warnings
 
   playwright-e2e:
+    name: Playwright — E2E (docker compose)
     runs-on: ubuntu-latest
 
     steps:
