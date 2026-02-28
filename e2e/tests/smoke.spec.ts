@@ -28,7 +28,9 @@ test('public menu index loads and can open menu (or shows not found gracefully)'
             await page.getByRole('button', { name: /^ver$/i }).click();
             await page.waitForLoadState('domcontentloaded');
             await expect(page).toHaveURL(/\/menu\//);
-            await expect(page.locator('body')).toContainText(/menú|local|restaurante|no disponible/i);
+            // Assert on something that will actually be present when a menu renders.
+            // With our seeded DB, we expect at least the restaurant name or a category name.
+            await expect(page.locator('body')).toContainText(/proyecto materia|sopas|ajiaco|preuba 12345/i);
             return;
         }
     }
@@ -38,7 +40,7 @@ test('public menu index loads and can open menu (or shows not found gracefully)'
     await page.getByRole('button', { name: /^ver$/i }).click();
     await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/menu\//);
-    await expect(page.locator('body')).toContainText(/menú|local|restaurante|no disponible/i);
+    await expect(page.locator('body')).toContainText(/proyecto materia|sopas|ajiaco|preuba 12345/i);
 });
 
 test('visual/layout sanity: login form has aligned controls', async ({ page }) => {
