@@ -40,7 +40,10 @@ def login(user_credentials: dict, db: Session = Depends(get_db)):
             restaurant_id = db_user.restaurants[0].id
         else:
             restaurant_id = None  # Admin sin restaurante
-    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    restaurant = None
+    if restaurant_id:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    restaurant_slug = restaurant.slug if restaurant else None
     
     # Crear token con info completa
     access_token = create_access_token(data={
@@ -48,7 +51,7 @@ def login(user_credentials: dict, db: Session = Depends(get_db)):
         "rol": db_user.rol,
         "email": db_user.email,
         "restaurant_id": str(restaurant_id) if restaurant_id else None,
-        "restaurant_slug": str(restaurant.slug ) if restaurant.slug else None 
+    "restaurant_slug": str(restaurant_slug) if restaurant_slug else None
     })
     print(f"access token: {access_token}")
     # Retornar token y datos mínimos
@@ -58,7 +61,7 @@ def login(user_credentials: dict, db: Session = Depends(get_db)):
         "user_id": str(db_user.id),
         "rol": db_user.rol,
         "restaurant_id": str(restaurant_id) if restaurant_id else None,
-        "restaurant_slug": str(restaurant.slug ) if restaurant.slug else None
+    "restaurant_slug": str(restaurant_slug) if restaurant_slug else None
     }
 
 

@@ -52,6 +52,9 @@ jobs:
       - name: Run repository tests (Postgres)
         run: python -m pytest -q -rA --disable-warnings tests/test_repositories_*.py
 
+      - name: Run API contract tests (in-process)
+        run: python -m pytest -q -rA --disable-warnings tests/test_api_*.py
+
   apprestaurante-pytest:
     runs-on: ubuntu-latest
 
