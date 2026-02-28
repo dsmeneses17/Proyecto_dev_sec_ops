@@ -2,7 +2,7 @@ name: api-tests
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "secrets-managing-avoid-paste"]
   pull_request:
 
 jobs:
