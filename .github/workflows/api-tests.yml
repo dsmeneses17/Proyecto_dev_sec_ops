@@ -136,6 +136,31 @@ jobs:
               --data '{"usuario":"__probe__","password":"__probe__"}' | head -n 40 || true
           done
 
+          echo "--- in-network probes (frontend_api -> backend_api:5000) ---"
+          docker compose exec -T frontend_api python - <<'PY'
+          import requests
+
+          BASE = "http://backend_api:5000"
+
+          def probe(method: str, path: str, **kwargs):
+            url = BASE + path
+            try:
+              r = requests.request(method, url, timeout=5, **kwargs)
+              print(f"{method} {path} -> {r.status_code}")
+              ct = r.headers.get("content-type", "")
+              if ct:
+                print(f"  content-type: {ct}")
+            except Exception as e:
+              print(f"{method} {path} -> ERROR: {e}")
+
+          for p in ("/docs", "/openapi.json", "/health", "/api/v1/docs", "/api/v1/openapi.json", "/api/v1/health"):
+            probe("GET", p)
+
+          payload = {"usuario": "__probe__", "password": "__probe__"}
+          for p in ("/auth/login", "/api/v1/auth/login"):
+            probe("POST", p, json=payload)
+          PY
+
           echo "--- last 200 lines: backend ---"
           docker compose logs --no-color --timestamps --tail=200 backend_api | cat
 
