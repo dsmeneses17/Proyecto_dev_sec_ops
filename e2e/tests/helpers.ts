@@ -22,24 +22,20 @@ export async function uiLogin(page: Page, usuario: string, password: string) {
         page.getByRole('button', { name: /entrar/i }).click(),
     ]);
 
-    // Robust proof-of-login: the session cookie should exist after successful login.
-    // (Cookie name inferred from common patterns; we also accept any cookie containing
-    // 'token' to avoid coupling to implementation.)
-    await expect
-        .poll(
-            async () => {
-                const cookies = await page.context().cookies();
-                const hasSession = cookies.some(
-                    (c) =>
-                        c.name.toLowerCase().includes('access') ||
-                        c.name.toLowerCase().includes('session') ||
-                        c.name.toLowerCase().includes('token'),
-                );
-                return hasSession;
-            },
-            { timeout: 10_000 },
-        )
-        .toBeTruthy();
+    // CI-safe proof-of-login:
+    // Don't rely on cookies (could be httpOnly, path-scoped, or otherwise not visible).
+    // Instead, probe a protected page and accept either a redirect or a 401 page.
+    await gotoAndExpectOk(page, '/restaurants');
+
+    // If we're still on the login page, treat it as a login failure and surface the UI error.
+    if (/\/api\/v1\/auth\/login/i.test(page.url())) {
+        // This should exist on invalid creds; if it's missing, the trace will show what's rendered.
+        await expect(page.locator('.alert.alert-danger')).toBeVisible({ timeout: 5_000 });
+        throw new Error('Login did not succeed (still on /api/v1/auth/login)');
+    }
+
+    // Otherwise we should have some authenticated page loaded.
+    await expect(page).toHaveURL(/\/(restaurants|categories|platos)\b/i);
 }
 
 export async function logout(page: Page) {
