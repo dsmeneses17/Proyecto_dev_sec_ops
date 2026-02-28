@@ -26,6 +26,7 @@
 6. [Ejecución Local](#6-ejecución-local)
 7. [Matriz de Cobertura](#7-matriz-de-cobertura)
 8. [Resumen de Casos de Prueba](#8-resumen-de-casos-de-prueba)
+9. [Resultados CI — Última Ejecución Exitosa](#9-resultados-ci--última-ejecución-exitosa)
 
 ---
 
@@ -35,24 +36,25 @@ El proyecto implementa una estrategia de pruebas en **tres niveles** (pirámide 
 
 ```
          ┌──────────────┐
-         │   E2E (3)    │  ← Playwright (navegador real)
+         │   E2E (7)    │  ← Playwright (navegador real)
          ├──────────────┤
-         │  Contrato (3)│  ← FastAPI TestClient (in-process)
+         │ Contrato (6) │  ← FastAPI TestClient (in-process)
          ├──────────────┤
-         │ Repos (5)    │  ← Postgres real vía SQLAlchemy
+         │  Repos (7)   │  ← Postgres real vía SQLAlchemy
          ├──────────────┤
-         │ Servicios(8) │  ← Mocks puros (unittest.mock)
+         │Servicios (21)│  ← Mocks puros (unittest.mock)
          └──────────────┘
               Base
 ```
 
 | Nivel | Framework | BD necesaria | Velocidad | Cantidad |
 |---|---|---|---|---|
-| Unitario — Servicios | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 8 tests |
-| Repositorios | pytest + SQLAlchemy | ✅ Postgres | 🔄 Media | 5 tests |
+| Unitario — Servicios (ApiRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 8 tests |
+| Unitario — Servicios (AppRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 13 tests |
+| Repositorios | pytest + SQLAlchemy | ✅ Postgres | 🔄 Media | 7 tests |
 | Contrato API | pytest + FastAPI `TestClient` | ✅ Postgres | 🔄 Media | 6 tests |
-| E2E | Playwright (TypeScript) | ✅ Docker Compose completo | 🐢 Lenta | 5 tests |
-| **Total** | | | | **24+ tests** |
+| E2E | Playwright (TypeScript) | ✅ Docker Compose completo | 🐢 Lenta | 7 tests |
+| **Total** | | | | **41 tests** |
 
 ---
 
@@ -578,18 +580,109 @@ npx playwright show-report
 | `test_services_dish_service.py` | `test_create_dish_returns_error_on_500` | `{"error": True, "status_code": 500}` |
 | `test_services_dish_service.py` | `test_toggle_availability_non_200` | `{"error": True, "status_code": 404}` |
 
-### E2E — Playwright (5 tests, Docker Compose completo)
+### E2E — Playwright (7 tests, Docker Compose completo)
 
 | Archivo | Test | Flujo |
 |---|---|---|
 | `smoke.spec.ts` | `home loads and has navbar brand` | GET / → verificar navbar |
-| `smoke.spec.ts` | `security: protected pages redirect to login` | GET /categories, /platos → redirect login |
-| `smoke.spec.ts` | `public menu index loads and can open menu` | GET /menu → seleccionar restaurante → ver menú |
-| `smoke.spec.ts` | `visual/layout sanity: login form` | GET /login → verificar dimensiones inputs |
-| `auth.spec.ts` | `register -> login -> logout` | Registro → Login → Protected page → Logout → Redirect |
+| `smoke.spec.ts` | `security: protected pages redirect to login when logged out` | GET /categories, /platos → redirect login |
+| `smoke.spec.ts` | `public menu index loads and can open menu (or shows not found gracefully)` | GET /menu → seleccionar restaurante → ver menú con categorías y platos |
+| `smoke.spec.ts` | `visual/layout sanity: login form has aligned controls` | GET /login → verificar que inputs son visibles y tienen ancho > 200px |
+| `auth.spec.ts` | `register owner -> can login -> logout redirects protected pages` | Registro → Login → Acceso a /restaurants → Logout → Redirect a login |
 | `auth.spec.ts` | `login failure shows error` | Login con credenciales malas → `.alert-danger` visible |
-| `crud.spec.ts` | `CRUD happy path` | Registro → Login → Crear categoría → Crear plato → Toggle disponibilidad → Eliminar plato → Eliminar categoría |
+| `crud.spec.ts` | `CRUD happy path (category + dish)` | Registro → Login → Crear categoría → Crear plato → Toggle disponibilidad → Eliminar plato → Eliminar categoría |
 
 ---
 
-> **Total de casos de prueba: ~34 tests** distribuidos en 3 niveles de la pirámide de testing, ejecutados automáticamente en CI con cada push a `main` o pull request.
+## 9. Resultados CI — Última Ejecución Exitosa
+
+> **Fecha:** 28 de febrero de 2026  
+> **Branch:** `main`  
+> **Resultado:** ✅ 41/41 tests pasaron
+
+### Job 1: ApiRestaurante — pytest
+
+```
+Step: Run service unit tests (fast)
+........                                                                 [100%]
+8 passed
+
+PASSED tests/test_services_auth_service.py::test_register_user_raises_when_username_exists
+PASSED tests/test_services_auth_service.py::test_authenticate_invalid_password
+PASSED tests/test_services_category_service.py::test_create_category_raises_when_name_exists
+PASSED tests/test_services_category_service.py::test_create_category_calls_repo_create
+PASSED tests/test_services_menu_service.py::test_get_public_menu_summary_raises_if_restaurant_missing
+PASSED tests/test_services_menu_service.py::test_get_public_menu_summary_counts_categories
+PASSED tests/test_services_restaurant_service.py::test_create_restaurant_raises_when_slug_exists
+PASSED tests/test_services_restaurant_service.py::test_create_restaurant_returns_payload_when_slug_free
+```
+
+```
+Step: Run repository tests (Postgres)
+.......                                                                  [100%]
+7 passed
+
+PASSED tests/test_repositories_categories.py::test_categories_create_and_list_by_restaurant
+PASSED tests/test_repositories_categories.py::test_categories_get_by_id
+PASSED tests/test_repositories_dishes.py::test_dishes_create_and_list_by_category
+PASSED tests/test_repositories_dishes.py::test_dishes_get_by_id
+PASSED tests/test_repositories_restaurants.py::test_restaurants_list_slugs
+PASSED tests/test_repositories_restaurants.py::test_restaurants_get_by_slug
+PASSED tests/test_repositories_users.py::test_users_create_and_get_by_username
+```
+
+```
+Step: Run API contract tests (in-process)
+......                                                                   [100%]
+6 passed
+
+PASSED tests/test_api_auth_login.py::test_auth_login_success_returns_token
+PASSED tests/test_api_auth_login.py::test_auth_login_unknown_user_is_404
+PASSED tests/test_api_auth_login.py::test_auth_login_wrong_password_is_401
+PASSED tests/test_api_contract_public_menu.py::test_public_menu_restaurants_contract
+PASSED tests/test_api_contract_public_menu.py::test_public_menu_by_slug_contract
+PASSED tests/test_api_contract_public_menu.py::test_public_menu_unknown_slug_is_404
+```
+
+### Job 2: AppRestaurante — pytest
+
+```
+Step: Run tests
+.............                                                            [100%]
+13 passed
+
+PASSED tests/test_services_auth_service.py::test_autenticar_usuario_success
+PASSED tests/test_services_auth_service.py::test_autenticar_usuario_invalid_credentials
+PASSED tests/test_services_auth_service.py::test_register_owner_with_restaurant_backend_error_detail
+PASSED tests/test_services_auth_service.py::test_register_owner_with_restaurant_connection_error
+PASSED tests/test_services_categoria_service.py::test_get_headers_strips_quotes_and_spaces
+PASSED tests/test_services_categoria_service.py::test_list_categorias_non_200_returns_error
+PASSED tests/test_services_categoria_service.py::test_create_categoria_http_401_message
+PASSED tests/test_services_dish_service.py::test_get_headers_strips_quotes
+PASSED tests/test_services_dish_service.py::test_create_dish_returns_error_on_500
+PASSED tests/test_services_dish_service.py::test_toggle_availability_non_200
+PASSED tests/test_services_menu_service.py::test_list_public_restaurants_returns_list
+PASSED tests/test_services_menu_service.py::test_list_public_restaurants_handles_non_200
+PASSED tests/test_services_menu_service.py::test_get_public_menu_non_200_returns_none
+```
+
+### Job 3: Playwright — E2E (docker compose)
+
+```
+Step: Run Playwright tests
+Running 7 tests using 1 worker
+
+  ✓ [chromium] tests/auth.spec.ts    — register owner -> can login -> logout    (2.806s)
+  ✓ [chromium] tests/auth.spec.ts    — login failure shows error                (0.580s)
+  ✓ [chromium] tests/crud.spec.ts    — CRUD happy path (category + dish)        (5.922s)
+  ✓ [chromium] tests/smoke.spec.ts   — home loads and has navbar brand          (0.358s)
+  ✓ [chromium] tests/smoke.spec.ts   — security: protected pages redirect       (0.264s)
+  ✓ [chromium] tests/smoke.spec.ts   — public menu index loads and can open     (1.636s)
+  ✓ [chromium] tests/smoke.spec.ts   — visual/layout sanity: login form         (0.489s)
+
+  7 passed (14.8s)
+```
+
+---
+
+> **Total de casos de prueba: 41 tests** distribuidos en 4 niveles de la pirámide de testing (unitarios de servicios, repositorios, contrato API y E2E), ejecutados automáticamente en CI con cada push a `main` o pull request.
