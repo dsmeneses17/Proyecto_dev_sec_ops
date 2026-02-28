@@ -1,0 +1,18 @@
+{
+    "name": "restaurante-e2e",
+    "private": true,
+    "version": "1.0.0",
+    "description": "Playwright E2E tests for Restaurante (frontend_api + backend_api via docker compose)",
+    "scripts": {
+        "test": "playwright test",
+        "test:ci": "playwright test --reporter=line,junit",
+        "test:headed": "playwright test --headed",
+        "pw:install": "playwright install --with-deps",
+        "pw:install:browsers": "playwright install"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.49.1",
+        "@types/node": "^22.13.1",
+        "typescript": "^5.7.3"
+    }
+}
