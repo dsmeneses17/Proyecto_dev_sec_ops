@@ -9,6 +9,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Mount the backup file to the initialization directory
+      - ./backup_complete.sql:/docker-entrypoint-initdb.d/backup_complete.sql
 
   backend_api:
     build: ./ApiRestaurante
