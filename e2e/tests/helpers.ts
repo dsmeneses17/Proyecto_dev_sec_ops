@@ -24,18 +24,21 @@ export async function uiLogin(page: Page, usuario: string, password: string) {
 
     // CI-safe proof-of-login:
     // Don't rely on cookies (could be httpOnly, path-scoped, or otherwise not visible).
-    // Instead, probe a protected page and accept either a redirect or a 401 page.
-    await gotoAndExpectOk(page, '/restaurants');
-
-    // If we're still on the login page, treat it as a login failure and surface the UI error.
+    // Also don't rely on where the app redirects after login (it may be '/', '/restaurants', etc).
+    // Instead: if we didn't stay on the login page, probe a protected page.
     if (/\/api\/v1\/auth\/login/i.test(page.url())) {
         // This should exist on invalid creds; if it's missing, the trace will show what's rendered.
         await expect(page.locator('.alert.alert-danger')).toBeVisible({ timeout: 5_000 });
         throw new Error('Login did not succeed (still on /api/v1/auth/login)');
     }
 
-    // Otherwise we should have some authenticated page loaded.
-    await expect(page).toHaveURL(/\/(restaurants|categories|platos)\b/i);
+    await gotoAndExpectOk(page, '/restaurants');
+
+    // After probing, we expect either:
+    // - to be on /restaurants (authenticated), or
+    // - redirected back to login (not authenticated).
+    await expect(page).not.toHaveURL(/\/api\/v1\/auth\/login/i);
+    await expect(page).toHaveURL(/\/restaurants\/?/i);
 }
 
 export async function logout(page: Page) {
