@@ -14,7 +14,6 @@ jobs:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
-      DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
 
     services:
       postgres:
@@ -38,6 +37,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build DATABASE_URL (tests)
+        run: |
+          echo "DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" >> "$GITHUB_ENV"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -89,6 +92,11 @@ jobs:
     name: Playwright — E2E (docker compose)
     runs-on: ubuntu-latest
 
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB || vars.POSTGRES_DB }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -105,13 +113,11 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps
 
+      - name: Build DATABASE_URL (docker compose)
+        run: |
+          echo "DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}" >> "$GITHUB_ENV"
+
       - name: Boot app (docker compose)
-        env:
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
-          # Inside docker compose, the DB hostname is the service name: postgres_db
-          DATABASE_URL: postgresql+psycopg2://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@postgres_db:5432/${{ vars.POSTGRES_DB }}
         run: docker compose up -d --build
 
       - name: Wait for frontend
