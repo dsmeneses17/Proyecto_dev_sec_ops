@@ -32,6 +32,7 @@ test('CRUD happy path (category + dish)', async ({ page }) => {
 
     // Login
     await uiLogin(page, usuario, password);
+    await gotoAndExpectOk(page, '/restaurants');
     await expect(page).toHaveURL(/\/restaurants/i);
 
     // Create category

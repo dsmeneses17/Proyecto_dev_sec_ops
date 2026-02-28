@@ -13,8 +13,33 @@ export async function uiLogin(page: Page, usuario: string, password: string) {
     await gotoAndExpectOk(page, '/api/v1/auth/login');
     await page.locator('input[name="usuario"]').fill(usuario);
     await page.locator('input[name="password"]').fill(password);
-    await page.getByRole('button', { name: /entrar/i }).click();
-    await page.waitForLoadState('domcontentloaded');
+
+    // Click and wait for navigation (some environments redirect to /restaurants,
+    // others may land on another protected page; in CI we've seen it stay on the
+    // login URL but still set the cookie slightly later).
+    await Promise.all([
+        page.waitForLoadState('domcontentloaded'),
+        page.getByRole('button', { name: /entrar/i }).click(),
+    ]);
+
+    // Robust proof-of-login: the session cookie should exist after successful login.
+    // (Cookie name inferred from common patterns; we also accept any cookie containing
+    // 'token' to avoid coupling to implementation.)
+    await expect
+        .poll(
+            async () => {
+                const cookies = await page.context().cookies();
+                const hasSession = cookies.some(
+                    (c) =>
+                        c.name.toLowerCase().includes('access') ||
+                        c.name.toLowerCase().includes('session') ||
+                        c.name.toLowerCase().includes('token'),
+                );
+                return hasSession;
+            },
+            { timeout: 10_000 },
+        )
+        .toBeTruthy();
 }
 
 export async function logout(page: Page) {

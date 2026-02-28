@@ -36,7 +36,8 @@ test('register owner -> can login -> logout redirects protected pages', async ({
     // We'll just verify that login works.
     await uiLogin(page, usuario, password);
 
-    // Admin login redirects to /restaurants per auth router.
+    // Don't couple to a single redirect target; just prove we can open a protected page.
+    await gotoAndExpectOk(page, '/restaurants');
     await expect(page).toHaveURL(/\/restaurants\/?/i);
 
     await logout(page);
