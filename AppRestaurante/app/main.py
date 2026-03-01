@@ -31,6 +31,7 @@ PUBLIC_PATHS = [
     "/favicon.ico",
     "/api/v1/auth/login",
     "/api/v1/auth/logout",
+    "/api/v1/auth/register-client",
     "/registro",
     "/menu",
 ]

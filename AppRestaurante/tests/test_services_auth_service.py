@@ -99,3 +99,102 @@ def test_register_owner_with_restaurant_connection_error(monkeypatch):
 
     resp = auth_service.register_owner_with_restaurant({"x": 1})
     assert resp == {"error": "No se pudo conectar al servidor"}
+
+
+# ---------- register_client ----------
+
+
+def test_register_client_success(monkeypatch):
+    monkeypatch.setattr(
+        auth_service,
+        "settings",
+        SimpleNamespace(BACKEND_URL="http://backend/api/v1/"),
+    )
+
+    def _post(url, json, timeout=15):
+        assert url == "http://backend/api/v1/auth/register"
+        assert json["nombre_completo"] == "Juan"
+        assert json["usuario"] == "juanp"
+        assert json["email"] == "juan@x.com"
+        assert json["rol"] == "cliente"
+        return _FakeResponse(200, {"message": "Usuario registrado", "user_id": "1", "rol": "cliente"})
+
+    monkeypatch.setattr(auth_service.requests, "post", _post)
+
+    data = auth_service.register_client(
+        nombre_completo="Juan",
+        usuario="juanp",
+        email="juan@x.com",
+        password="secret",
+    )
+    assert data["message"] == "Usuario registrado"
+
+
+def test_register_client_duplicate_returns_error(monkeypatch):
+    monkeypatch.setattr(
+        auth_service,
+        "settings",
+        SimpleNamespace(BACKEND_URL="http://backend/api/v1/"),
+    )
+
+    monkeypatch.setattr(
+        auth_service.requests,
+        "post",
+        lambda *_a, **_k: _FakeResponse(400, {"detail": "Usuario ya existe"}, text="Usuario ya existe"),
+    )
+
+    data = auth_service.register_client(
+        nombre_completo="X",
+        usuario="dup",
+        email="dup@x.com",
+        password="secret",
+    )
+    assert data == {"error": "Usuario ya existe"}
+
+
+def test_register_client_validation_422(monkeypatch):
+    monkeypatch.setattr(
+        auth_service,
+        "settings",
+        SimpleNamespace(BACKEND_URL="http://backend/api/v1/"),
+    )
+
+    monkeypatch.setattr(
+        auth_service.requests,
+        "post",
+        lambda *_a, **_k: _FakeResponse(
+            422,
+            {"detail": [{"msg": "Value error, La contraseña debe tener al menos 6 caracteres"}]},
+            text="validation error",
+        ),
+    )
+
+    data = auth_service.register_client(
+        nombre_completo="X",
+        usuario="user",
+        email="x@x.com",
+        password="12",
+    )
+    assert "error" in data
+    assert "contraseña" in data["error"].lower() or "6 caracteres" in data["error"].lower()
+
+
+def test_register_client_connection_error(monkeypatch):
+    monkeypatch.setattr(
+        auth_service,
+        "settings",
+        SimpleNamespace(BACKEND_URL="http://backend/api/v1/"),
+    )
+
+    def _raise(*_a, **_k):
+        raise requests.exceptions.ConnectionError("down")
+
+    monkeypatch.setattr(auth_service.requests, "post", _raise)
+
+    data = auth_service.register_client(
+        nombre_completo="X",
+        usuario="user",
+        email="x@x.com",
+        password="secret",
+    )
+    assert data == {"error": "No se pudo conectar al servidor"}

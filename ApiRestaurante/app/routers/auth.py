@@ -80,17 +80,26 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Usuario ya existe")
 
+    existing_email = db.query(User).filter(User.email.ilike(user.email.strip())).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+
     new_user = User(
         nombre_completo=user.nombre_completo,
         usuario=user.usuario,
+        email=user.email,
         password=hash_password(user.password),
         rol=user.rol,
-        activo=True
+        activo=True,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return {"message": "Usuario registrado"}
+    return {
+        "message": "Usuario registrado",
+        "user_id": str(new_user.id),
+        "rol": new_user.rol,
+    }
 
 
 @router.post("/register-owner")

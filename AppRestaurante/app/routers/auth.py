@@ -23,6 +23,34 @@ def logout():
 def mostrar_login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+@router.get("/register-client")
+def mostrar_registro_cliente(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@router.post("/register-client")
+def procesar_registro_cliente(
+    request: Request,
+    nombre_completo: str = Form(...),
+    usuario: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+):
+    resultado = auth_service.register_client(
+        nombre_completo=nombre_completo,
+        usuario=usuario,
+        email=email,
+        password=password,
+    )
+
+    if "error" in resultado:
+        return templates.TemplateResponse(
+            "register.html",
+            {"request": request, "error": resultado["error"]},
+        )
+
+    # Registro exitoso → redirigir al login con mensaje de éxito
+    return RedirectResponse(url="/api/v1/auth/login?registered=1", status_code=303)
+
 @router.post("/login")
 def procesar_login(request: Request, usuario: str = Form(...), password: str = Form(...)):
     resultado = auth_service.autenticar_usuario(usuario, password)

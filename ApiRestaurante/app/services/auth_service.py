@@ -16,6 +16,10 @@ class UsernameAlreadyExists(AuthServiceError):
     pass
 
 
+class EmailAlreadyExists(AuthServiceError):
+    pass
+
+
 class InvalidCredentials(AuthServiceError):
     pass
 
@@ -32,6 +36,9 @@ class RegisterUserInput:
 def register_user(db: Session, data: RegisterUserInput):
     if users_repo.get_by_username(db, data.usuario) is not None:
         raise UsernameAlreadyExists("Usuario ya existe")
+
+    if data.email and users_repo.get_by_email(db, data.email) is not None:
+        raise EmailAlreadyExists("El email ya está registrado")
 
     password_hash = hash_password(data.password)
     return users_repo.create(

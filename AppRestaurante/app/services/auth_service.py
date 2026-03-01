@@ -51,3 +51,55 @@ def register_owner_with_restaurant(data: dict):
         return resp.json()
     except Exception:
         return {"error": "No se pudo conectar al servidor"}
+
+
+def register_client(
+    *,
+    nombre_completo: str,
+    usuario: str,
+    email: str,
+    password: str,
+):
+    """Register a new client user (no restaurant)."""
+
+    try:
+        resp = requests.post(
+            f"{settings.BACKEND_URL}auth/register",
+            json={
+                "nombre_completo": nombre_completo,
+                "usuario": usuario,
+                "email": email,
+                "password": password,
+                "rol": "cliente",
+            },
+            timeout=15,
+        )
+
+        if resp.status_code == 422:
+            # Pydantic validation errors
+            detail = None
+            try:
+                body = resp.json()
+                errors = body.get("detail", [])
+                if isinstance(errors, list) and errors:
+                    msgs = [e.get("msg", "") for e in errors]
+                    detail = "; ".join(msgs)
+                elif isinstance(errors, str):
+                    detail = errors
+            except Exception:
+                detail = resp.text
+            return {"error": detail or "Datos inválidos"}
+
+        if resp.status_code != 200:
+            detail = None
+            try:
+                detail = resp.json().get("detail")
+            except Exception:
+                detail = resp.text
+            return {"error": detail or "No se pudo completar el registro"}
+
+        return resp.json()
+    except requests.exceptions.ConnectionError:
+        return {"error": "No se pudo conectar al servidor"}
+    except Exception as e:
+        return {"error": f"Error inesperado: {e}"}
