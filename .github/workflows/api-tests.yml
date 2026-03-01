@@ -72,7 +72,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio pytest-cov
 
       - name: Run service unit tests (fast)
         run: python -m pytest -q -rA --disable-warnings tests/test_services_*.py
@@ -85,6 +85,14 @@ jobs:
 
       - name: Run API contract tests (in-process)
         run: python -m pytest -q -rA --disable-warnings tests/test_api_*.py
+
+      - name: Run full suite with coverage (RNF-07)
+        run: |
+          python -m pytest tests/ \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
+            -q --disable-warnings
 
   apprestaurante-pytest:
     name: AppRestaurante — pytest
@@ -107,10 +115,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest pytest-cov
 
-      - name: Run tests
-        run: python -m pytest -q -rA --disable-warnings
+      - name: Run tests with coverage (RNF-07)
+        run: |
+          python -m pytest tests/ \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
+            -q -rA --disable-warnings
 
   playwright-e2e:
     name: Playwright — E2E (docker compose)

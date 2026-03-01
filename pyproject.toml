@@ -43,3 +43,25 @@ known-first-party = ["app"]
 quote-style    = "double"
 indent-style   = "space"
 line-ending    = "lf"
+
+# ──────────────────────────────────────────────────────────────────────
+# Coverage – configuration  (RNF-07)
+# ──────────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["app"]
+omit   = [
+    "app/__pycache__/*",
+    "app/preuba.py",
+    "app/prueba.py",
+    "app/z_crearTablas/*",
+]
+
+[tool.coverage.report]
+fail_under     = 60
+show_missing   = true
+skip_empty     = true
+exclude_lines  = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "pass",
+]
