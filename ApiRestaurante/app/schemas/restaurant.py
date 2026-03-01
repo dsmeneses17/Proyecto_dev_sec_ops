@@ -11,6 +11,8 @@ class RestaurantBase(BaseModel):
     direccion: Optional[str] = None
     horarios: Optional[Dict] = None
     slug: Optional[Annotated[str, Field(max_length=100)]] = None
+    qr_color_fg: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")] = "#000000"  # QR foreground color
+    qr_color_bg: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")] = "#FFFFFF"  # QR background color
 
     
 
@@ -29,6 +31,8 @@ class RestaurantOut(BaseModel):
     horarios: Optional[Dict] = None
     slug: Optional[str] = None
     logo: Optional[str] = None  # ✅ ahora opcional
+    qr_color_fg: str = "#000000"
+    qr_color_bg: str = "#FFFFFF"
 
     class Config:
         from_attributes = True  # en Pydantic v2 reemplaza orm_mode

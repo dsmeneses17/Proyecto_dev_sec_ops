@@ -87,6 +87,8 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
             "nombre": restaurant.nombre,
             "logo_url": restaurant.logo,
             "slug": restaurant.slug,
+            "qr_color_fg": restaurant.qr_color_fg,
+            "qr_color_bg": restaurant.qr_color_bg,
         },
         "categorias": []
     }
