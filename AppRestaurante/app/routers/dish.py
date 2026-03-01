@@ -21,6 +21,12 @@ from app.services.storage import build_display_url
 router = APIRouter(tags=["platos"])
 
 
+def _safe_cookie_value(value: str | None):
+    if value in [None, "", "None", "null"]:
+        return None
+    return value
+
+
 def _sign_dish_images(categorias):
     if not isinstance(categorias, list):
         return categorias
@@ -114,8 +120,24 @@ def crear(
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
 
-    decoded = jwt.decode(token, options={"verify_signature": False})
-    restaurante_id = decoded.get("restaurant_id")
+    restaurante_id = _safe_cookie_value(request.cookies.get("restaurant_id"))
+    if not restaurante_id:
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        restaurante_id = decoded.get("restaurant_id")
+
+    if not restaurante_id:
+        categorias = _sign_dish_images(list_dishes(token))
+        return templates.TemplateResponse(
+            "dish_form.html",
+            {
+                "request": request,
+                "categorias": categorias,
+                "plato": None,
+                "error": "No hay restaurante activo asociado. Guarda el restaurante antes de crear platos.",
+                "success": None,
+                **get_template_context(request),
+            },
+        )
 
     payload = {
         "nombre": nombre,

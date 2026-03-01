@@ -18,6 +18,12 @@ from app.services.categoria_service import (
 router = APIRouter(tags=["categorias"])
 
 
+def _safe_cookie_value(value: str | None):
+    if value in [None, "", "None", "null"]:
+        return None
+    return value
+
+
 @router.get("", response_class=HTMLResponse)
 def listar(request: Request):
     token = request.cookies.get("access_token")
@@ -85,9 +91,23 @@ def crear(
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
-    # Decodificar token para obtener restaurante_id
-    decoded = jwt.decode(token, options={"verify_signature": False})
-    restaurante_id = decoded.get("restaurant_id")
+
+    restaurante_id = _safe_cookie_value(request.cookies.get("restaurant_id"))
+    if not restaurante_id:
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        restaurante_id = decoded.get("restaurant_id")
+
+    if not restaurante_id:
+        categorias = list_categorias(token)
+        return templates.TemplateResponse(
+            "categoria_form.html",
+            {
+                "request": request,
+                "categorias": categorias,
+                "error": "No hay restaurante activo asociado. Guarda el restaurante antes de crear categorías.",
+                **get_template_context(request),
+            },
+        )
 
     payload = {
         "nombre": nombre,

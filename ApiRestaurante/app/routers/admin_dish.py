@@ -5,6 +5,7 @@ from app.deps import get_db
 from sqlalchemy.orm import Session,  joinedload
 from app.models.dish import Dish
 from app.models.category import Category
+from app.models.restaurant import Restaurant
 from app.schemas.dish import DishCreate, DishUpdate, DishOut
 from app.core.security import get_current_user
 from typing import List
@@ -26,6 +27,12 @@ async def list_dishes_by_category(
     from app.models.dish import Dish
 
     restaurant_id = user.get("restaurant_id")
+    if not restaurant_id:
+        restaurant = db.query(Restaurant).filter(Restaurant.admin_id == user.get("id")).first()
+        restaurant_id = restaurant.id if restaurant else None
+
+    if not restaurant_id:
+        return []
 
     categorias = db.query(Category).filter(
         Category.restaurante_id == restaurant_id
