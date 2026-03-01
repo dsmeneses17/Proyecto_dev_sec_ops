@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 import signal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -97,6 +97,15 @@ PUBLIC_PATHS = [
     "/registro",
     "/menu",
 ]
+
+def _is_public_path(request_path: str) -> bool:
+    """Check if a path is public, including special handling for QR color updates"""
+    if any(request_path.startswith(path) for path in PUBLIC_PATHS):
+        return True
+    # Allow POST requests to /menu/{slug}/update-qr-colors
+    if "/menu/" in request_path and "update-qr-colors" in request_path:
+        return True
+    return False
 # Plantillas HTML (shared)
 
 @app.get("/", response_class=HTMLResponse)
@@ -169,7 +178,7 @@ async def restaurant_form(request: Request):
 @app.middleware("http")
 async def jwt_middleware(request: Request, call_next):
     
-    if any(request.url.path.startswith(path) for path in PUBLIC_PATHS):
+    if _is_public_path(request.url.path):
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")

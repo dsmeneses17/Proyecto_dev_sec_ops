@@ -4,6 +4,7 @@ from app.ui.templates import templates
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from app.services.menu_service import get_public_menu, list_public_restaurants
+from pydantic import BaseModel
 
 import qrcode
 import qrcode.image.svg
@@ -12,6 +13,11 @@ import base64
 from fastapi.responses import Response
 
 router = APIRouter()
+
+
+class QRColorUpdate(BaseModel):
+    qr_color_fg: str
+    qr_color_bg: str
 
 
 def _build_public_menu_url(request: Request, slug: str) -> str:
@@ -182,7 +188,7 @@ def exportar_qr_svg(request: Request, slug: str):
 
 
 @router.post("/menu/{slug}/update-qr-colors")
-async def update_qr_colors(request: Request, slug: str):
+def update_qr_colors(request: Request, slug: str, colors: QRColorUpdate):
     """
     Update QR colors for a restaurant
     Only restaurant owners can update their QR colors
@@ -197,7 +203,11 @@ async def update_qr_colors(request: Request, slug: str):
         payload = decode_token(token)
         if not payload or "restaurant_id" not in payload:
             raise HTTPException(status_code=403, detail="No autorizado")
-    except:
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logging.error(f"Token decode error: {e}")
         raise HTTPException(status_code=403, detail="Token inválido")
 
     # Get menu and verify restaurant
@@ -208,18 +218,12 @@ async def update_qr_colors(request: Request, slug: str):
     if str(menu.restaurant.id) != str(payload["restaurant_id"]):
         raise HTTPException(status_code=403, detail="No eres propietario de este restaurante")
 
-    # Parse JSON body
-    try:
-        body = await request.json()
-    except:
-        raise HTTPException(status_code=400, detail="JSON inválido")
-
     # Validate colors format (hex #RRGGBB)
     import re
     hex_pattern = r"^#[0-9A-Fa-f]{6}$"
     
-    qr_color_fg = body.get("qr_color_fg", "#000000")
-    qr_color_bg = body.get("qr_color_bg", "#FFFFFF")
+    qr_color_fg = colors.qr_color_fg
+    qr_color_bg = colors.qr_color_bg
 
     if not re.match(hex_pattern, qr_color_fg):
         raise HTTPException(status_code=400, detail="Color QR inválido")
@@ -238,4 +242,6 @@ async def update_qr_colors(request: Request, slug: str):
     except HTTPException:
         raise
     except Exception as e:
+        import logging
+        logging.error(f"Color update error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
