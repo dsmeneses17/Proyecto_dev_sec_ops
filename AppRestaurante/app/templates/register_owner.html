@@ -39,12 +39,16 @@
 
                     <div class="col-12">
                         <label class="form-label">Nombre del restaurante</label>
-                        <input class="form-control" type="text" name="restaurant_nombre" id="restaurant_nombre" required />
+                        <input class="form-control" type="text" name="restaurant_nombre" id="restaurant_nombre"
+                            required />
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Slug <small class="text-muted">(opcional — se genera automáticamente)</small></label>
-                        <input class="form-control" type="text" name="restaurant_slug" id="restaurant_slug" placeholder="se-genera-del-nombre" />
-                        <div class="form-text">URL del menú público. Si lo dejas vacío, se genera del nombre del restaurante.</div>
+                        <label class="form-label">Slug <small class="text-muted">(opcional — se genera
+                                automáticamente)</small></label>
+                        <input class="form-control" type="text" name="restaurant_slug" id="restaurant_slug"
+                            placeholder="se-genera-del-nombre" />
+                        <div class="form-text">URL del menú público. Si lo dejas vacío, se genera del nombre del
+                            restaurante.</div>
                     </div>
                     <div class="col-12 col-md-6">
                         <label class="form-label">Teléfono</label>
@@ -69,28 +73,28 @@
 </div>
 
 <script>
-// Auto-preview: generate slug from restaurant name in real-time
-(function () {
-    const nameInput = document.getElementById('restaurant_nombre');
-    const slugInput = document.getElementById('restaurant_slug');
-    if (!nameInput || !slugInput) return;
+    // Auto-preview: generate slug from restaurant name in real-time
+    (function () {
+        const nameInput = document.getElementById('restaurant_nombre');
+        const slugInput = document.getElementById('restaurant_slug');
+        if (!nameInput || !slugInput) return;
 
-    let userEditedSlug = false;
+        let userEditedSlug = false;
 
-    slugInput.addEventListener('input', function () {
-        userEditedSlug = slugInput.value.trim() !== '';
-    });
+        slugInput.addEventListener('input', function () {
+            userEditedSlug = slugInput.value.trim() !== '';
+        });
 
-    nameInput.addEventListener('input', function () {
-        if (userEditedSlug) return;
-        const val = nameInput.value
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
-            .toLowerCase().trim()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/-{2,}/g, '-')
-            .replace(/^-|-$/g, '');
-        slugInput.value = val;
-    });
-})();
+        nameInput.addEventListener('input', function () {
+            if (userEditedSlug) return;
+            const val = nameInput.value
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
+                .toLowerCase().trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/-{2,}/g, '-')
+                .replace(/^-|-$/g, '');
+            slugInput.value = val;
+        });
+    })();
 </script>
 {% endblock %}

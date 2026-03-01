@@ -7,7 +7,7 @@ from typing import List
 from app.deps import get_db
 from app.models.restaurant import Restaurant
 from app.models.category import Category
-from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryOut
+from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryOut, CategoryReorder
 from app.core.security import get_current_user, get_current_user_debug
 
 
@@ -143,3 +143,44 @@ async def delete_category(
     db.delete(category)
     db.commit()
     return {"message": "Categoría eliminada"}
+
+
+@router.patch("/reorder", response_model=dict)
+async def reorder_categories(
+    data: CategoryReorder,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    """Reordenar categorías de un restaurante."""
+    
+    if user["rol"].lower() != "admin":
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    # Obtener el restaurante del admin
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.admin_id == user["id"]
+    ).first()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurante no encontrado")
+
+    # Actualizar las posiciones de las categorías
+    for item in data.categorias:
+        category_id = item.get("id")
+        posicion = item.get("posicion")
+
+        if not category_id or posicion is None:
+            raise HTTPException(status_code=400, detail="Falta id o posición en reorder")
+
+        category = db.query(Category).filter(
+            Category.id == UUID(category_id),
+            Category.restaurante_id == restaurant.id
+        ).first()
+
+        if not category:
+            raise HTTPException(status_code=404, detail=f"Categoría {category_id} no encontrada")
+
+        category.posicion = posicion
+
+    db.commit()
+    return {"message": "Categorías reordenadas exitosamente"}
