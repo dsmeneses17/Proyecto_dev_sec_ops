@@ -26,12 +26,23 @@ def record_menu_view(slug: str, source: str = "menu") -> None:
         logging.warning("analytics record_menu_view failed: %s", exc)
 
 
-def get_analytics_stats(token: str) -> dict | None:
-    """Fetch aggregated stats for the admin's restaurant."""
+def get_analytics_stats(token: str, start_date: str | None = None, end_date: str | None = None) -> dict | None:
+    """Fetch aggregated stats for the admin's restaurant.
+
+    RF24 – optionally pass ``start_date`` / ``end_date`` (YYYY-MM-DD) to
+    filter the daily breakdown and get ``filtered_views``.
+    """
     try:
+        params: dict[str, str] = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+
         resp = requests.get(
             f"{ANALYTICS_URL}/stats",
             headers={"Authorization": f"Bearer {token}"},
+            params=params,
             timeout=10,
         )
         if resp.status_code == 200:

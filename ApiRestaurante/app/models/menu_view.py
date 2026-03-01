@@ -1,9 +1,18 @@
-"""Model for tracking public menu visualizations (RF22)."""
+"""Model for tracking public menu visualizations (RF22 / CU-08)."""
+
+import hashlib
+import uuid
 
 from sqlalchemy import Column, String, Integer, TIMESTAMP, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from app.db import Base
-import uuid
+
+
+def _hash_ip(ip: str | None) -> str | None:
+    """Return a SHA-256 hex-digest of an IP address (anonymisation)."""
+    if not ip:
+        return None
+    return hashlib.sha256(ip.encode()).hexdigest()
 
 
 class MenuView(Base):
@@ -18,6 +27,7 @@ class MenuView(Base):
 
     # Optional metadata
     user_agent = Column(String(512), nullable=True)
-    ip_address = Column(String(45), nullable=True)  # supports IPv6
+    ip_hash = Column(String(64), nullable=True)      # SHA-256 of the real IP (anonymised)
+    referrer = Column(String(512), nullable=True)     # HTTP Referer header
 
     viewed_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False, index=True)

@@ -16,6 +16,47 @@
 </div>
 {% else %}
 
+{# ── RF24: Date-range filter form ── #}
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-funnel"></i> Filtrar por rango de fechas</div>
+    <div class="card-body">
+        <form method="get" action="/analytics" class="row g-3 align-items-end" id="dateFilterForm">
+            <div class="col-sm-4 col-lg-3">
+                <label for="start_date" class="form-label">Fecha inicio</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-sm-4 col-lg-3">
+                <label for="end_date" class="form-label">Fecha fin</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="col-sm-4 col-lg-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> Filtrar
+                </button>
+                <a href="/analytics" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </a>
+                {# CU-08: CSV export #}
+                <a href="/analytics/export{% if start_date and end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}"
+                    class="btn btn-outline-success ms-auto">
+                    <i class="bi bi-download"></i> Exportar CSV
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Filtered-range banner ── #}
+{% if stats.filtered_views is not none %}
+<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-calendar-range me-2 fs-5"></i>
+    <div>
+        Mostrando <strong>{{ stats.filtered_views }}</strong> visualizaciones
+        entre <strong>{{ stats.start_date }}</strong> y <strong>{{ stats.end_date }}</strong>.
+    </div>
+</div>
+{% endif %}
+
 {# KPI cards #}
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
@@ -52,17 +93,79 @@
     </div>
 </div>
 
-{# Chart #}
+{# Daily trend chart #}
 <div class="card mb-4">
-    <div class="card-header">Visualizaciones diarias (últimos 30 días)</div>
+    <div class="card-header">
+        📈 Tendencia diaria
+        {% if stats.start_date and stats.end_date %}
+        ({{ stats.start_date }} → {{ stats.end_date }})
+        {% else %}
+        (últimos 30 días)
+        {% endif %}
+    </div>
     <div class="card-body">
         <canvas id="viewsChart" height="100"></canvas>
     </div>
 </div>
 
+{# CU-08: Hourly distribution (full width) #}
+<div class="card mb-4">
+    <div class="card-header">🕐 Distribución por hora del día</div>
+    <div class="card-body">
+        <canvas id="hourlyChart" height="80"></canvas>
+    </div>
+</div>
+
+{# CU-08: Device & Browser side by side #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" class="mb-4">
+    {# Device donut #}
+    <div class="card">
+        <div class="card-header">📱 Dispositivos</div>
+        <div class="card-body">
+            <div style="display:flex;align-items:center;gap:1.5rem;">
+                <div style="width:200px;height:200px;flex-shrink:0;">
+                    <canvas id="deviceChart"></canvas>
+                </div>
+                <div style="flex:1;">
+                    {% for d in stats.device_breakdown %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-medium">{{ d.name }}</span>
+                        <span class="badge bg-secondary rounded-pill">{{ d.count }} ({{ d.percentage }}%)</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {# Browser donut #}
+    <div class="card">
+        <div class="card-header">🌐 Navegadores</div>
+        <div class="card-body">
+            <div style="display:flex;align-items:center;gap:1.5rem;">
+                <div style="width:200px;height:200px;flex-shrink:0;">
+                    <canvas id="browserChart"></canvas>
+                </div>
+                <div style="flex:1;">
+                    {% for b in stats.browser_breakdown %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-medium">{{ b.name }}</span>
+                        <span class="badge bg-secondary rounded-pill">{{ b.count }} ({{ b.percentage }}%)</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {# Daily breakdown table #}
 <div class="card">
-    <div class="card-header">Desglose diario</div>
+    <div class="card-header">
+        Desglose diario
+        {% if stats.filtered_views is not none %}
+        <span class="badge bg-info ms-2">{{ stats.filtered_views }} en rango</span>
+        {% endif %}
+    </div>
     <div class="card-body p-0">
         <table class="table table-striped mb-0">
             <thead>
@@ -79,7 +182,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="2" class="text-center text-muted py-3">Sin datos aún</td>
+                    <td colspan="2" class="text-center text-muted py-3">Sin datos en este rango</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -87,32 +190,97 @@
     </div>
 </div>
 
-{# Chart.js CDN – lightweight bar chart #}
+{# ── Charts ── #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
+    /* ---- Daily trend bar chart ---- */
     const daily = {{ stats.daily_breakdown | tojson }};
-    const labels = daily.map(d => d.date);
-    const data = daily.map(d => d.views);
-
     new Chart(document.getElementById('viewsChart'), {
         type: 'bar',
         data: {
-            labels,
+            labels: daily.map(d => d.date),
             datasets: [{
                 label: 'Visualizaciones',
-                data,
+                data: daily.map(d => d.views),
                 backgroundColor: 'rgba(13,110,253,0.6)',
                 borderColor: 'rgba(13,110,253,1)',
-                borderWidth: 1,
-                borderRadius: 4,
+                borderWidth: 1, borderRadius: 4,
             }]
         },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } }
-            }
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    /* ---- CU-08: Hourly distribution ---- */
+    const hourly = {{ stats.hourly_breakdown | tojson }};
+    new Chart(document.getElementById('hourlyChart'), {
+        type: 'bar',
+        data: {
+            labels: hourly.map(h => h.hour.toString().padStart(2, '0') + ':00'),
+            datasets: [{
+                label: 'Visualizaciones',
+                data: hourly.map(h => h.views),
+                backgroundColor: 'rgba(25,135,84,0.6)',
+                borderColor: 'rgba(25,135,84,1)',
+                borderWidth: 1, borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    /* ---- CU-08: Device doughnut ---- */
+    const devices = {{ stats.device_breakdown | tojson }};
+    const deviceColors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#0dcaf0'];
+    new Chart(document.getElementById('deviceChart'), {
+        type: 'doughnut',
+        data: {
+            labels: devices.map(d => d.name),
+            datasets: [{
+                data: devices.map(d => d.count),
+                backgroundColor: deviceColors.slice(0, devices.length),
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    /* ---- CU-08: Browser doughnut ---- */
+    const browsers = {{ stats.browser_breakdown | tojson }};
+    const browserColors = ['#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0', '#adb5bd'];
+    new Chart(document.getElementById('browserChart'), {
+        type: 'doughnut',
+        data: {
+            labels: browsers.map(b => b.name),
+            datasets: [{
+                data: browsers.map(b => b.count),
+                backgroundColor: browserColors.slice(0, browsers.length),
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    /* RF24 – client-side date validation */
+    document.getElementById('dateFilterForm').addEventListener('submit', function (e) {
+        const s = document.getElementById('start_date').value;
+        const en = document.getElementById('end_date').value;
+        if ((s && !en) || (!s && en)) {
+            e.preventDefault();
+            alert('Debes seleccionar ambas fechas (inicio y fin).');
+        } else if (s && en && s > en) {
+            e.preventDefault();
+            alert('La fecha de inicio debe ser anterior o igual a la fecha de fin.');
         }
     });
 </script>

@@ -43,6 +43,13 @@ def db_session(engine):
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = TestingSessionLocal()
     try:
+        # Clean tables before each test so seed data doesn't interfere
+        db.execute(text("TRUNCATE TABLE menu_views RESTART IDENTITY CASCADE"))
+        db.execute(text("TRUNCATE TABLE dishes       RESTART IDENTITY CASCADE"))
+        db.execute(text("TRUNCATE TABLE categories   RESTART IDENTITY CASCADE"))
+        db.execute(text("TRUNCATE TABLE restaurants   RESTART IDENTITY CASCADE"))
+        db.execute(text("TRUNCATE TABLE users         RESTART IDENTITY CASCADE"))
+        db.commit()
         yield db
     finally:
         db.close()

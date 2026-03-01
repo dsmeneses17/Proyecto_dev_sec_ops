@@ -1093,7 +1093,7 @@ footer {
 }
 
 
-.card {
+.restaurant-container .card {
   display: flex;
   flex-wrap: wrap;
   /* permite que los rows se acomoden en varias filas */
@@ -1104,7 +1104,7 @@ footer {
   border-radius: 8px;
 }
 
-.row {
+.restaurant-container .row {
   display: flex;
   /* label y value en línea */
   align-items: center;
@@ -1116,13 +1116,13 @@ footer {
   margin-bottom: 10px;
 }
 
-.label {
+.restaurant-container .label {
   font-weight: bold;
   width: 40%;
   /* ancho mínimo para que labels se alineen */
 }
 
-.value {
+.restaurant-container .value {
   flex: 1;
   /* ocupa el espacio restante */
   word-break: break-word;
