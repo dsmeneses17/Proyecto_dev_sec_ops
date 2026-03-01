@@ -242,9 +242,6 @@ def toggle(request: Request, dish_id: str):
         raise HTTPException(status_code=401, detail="Token requerido")
 
     resultado = toggle_availability(token, dish_id)
-    if "error" not in resultado:
-        return RedirectResponse(url="/platos", status_code=303)
-
     categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(
@@ -254,7 +251,7 @@ def toggle(request: Request, dish_id: str):
             "categorias": categorias,
             "plato": None,
             "error": resultado.get("detalle") if "error" in resultado else None,
-            "success": None if "error" in resultado else "Disponibilidad actualizada",
+            "success": "Disponibilidad actualizada" if "error" not in resultado else None,
             **get_template_context(request)
         }
     )
