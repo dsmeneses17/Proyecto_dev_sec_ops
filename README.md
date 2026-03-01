@@ -22,7 +22,7 @@ Plataforma para gestión de restaurantes con arquitectura desacoplada:
 Desde la raíz del proyecto (`Proyecto_dev_sec_ops`):
 
 ```bash
-docker compose up --build -d
+docker compose --env-file .env up --build -d
 ```
 
 Esto levanta:
@@ -36,13 +36,21 @@ Esto levanta:
 > El backend no aplica migraciones automáticas al iniciar; por eso se ejecuta el script de creación de tablas.
 
 ```bash
-docker compose exec backend_api python -m app.z_crearTablas.crearTablas
+docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crearTablas
 ```
+
+### 1.1) Validar base de datos
+
+```bash
+docker compose --env-file .env exec -T postgres_db psql -U <POSTGRES_USER> -d <POSTGRES_DB> -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';"
+```
+
+Si retorna un número mayor a `0`, la DB está inicializada.
 
 ### 2) Verificar servicios
 
 ```bash
-docker compose ps
+docker compose --env-file .env ps
 ```
 
 ### 3) Accesos
@@ -54,21 +62,21 @@ docker compose ps
 ### 4) Ver logs
 
 ```bash
-docker compose logs -f backend_api
-docker compose logs -f frontend_api
-docker compose logs -f postgres_db
+docker compose --env-file .env logs -f backend_api
+docker compose --env-file .env logs -f frontend_api
+docker compose --env-file .env logs -f postgres_db
 ```
 
 ### 5) Apagar entorno
 
 ```bash
-docker compose down
+docker compose --env-file .env down
 ```
 
 Para borrar volumen de BD también:
 
 ```bash
-docker compose down -v
+docker compose --env-file .env down -v
 ```
 
 ---
@@ -82,7 +90,7 @@ Variables obligatorias para la base de datos (usadas por `postgres_db` y `ApiRes
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
-- `DATABASE_URL` (por ejemplo: `postgresql+psycopg2://<user>:<pass>@postgres_db:5432/<db>` dentro de docker compose, o `@localhost:5432/` para ejecutar tests localmente)
+- `DATABASE_URL` (por ejemplo: `postgresql+psycopg2://<user>:<pass>@postgres_db:5432/<db>` dentro de docker compose)
 
 Variables obligatorias para Object Storage (S3-compatible) consumidas por `AppRestaurante`:
 
@@ -102,7 +110,7 @@ Ejemplo:
 POSTGRES_USER=
 POSTGRES_PASSWORD=
 POSTGRES_DB=
-DATABASE_URL=
+DATABASE_URL=postgresql+psycopg2://<user>:<pass>@postgres_db:5432/<db>
 
 S3_BUCKET_NAME=mi-bucket
 S3_REGION=us-east-1
@@ -144,7 +152,23 @@ pytest
 Si quieres importar `backup_complete.sql` dentro del PostgreSQL del compose:
 
 ```powershell
-Get-Content .\backup_complete.sql | docker compose exec -T postgres_db psql -U postgres -d Restaurante
+Get-Content .\backup_complete.sql | docker compose --env-file .env exec -T postgres_db psql -U <POSTGRES_USER> -d <POSTGRES_DB>
+```
+
+Si quieres restaurar desde `backup_complete.dump`:
+
+```powershell
+docker compose --env-file .env exec -T postgres_db pg_restore -U <POSTGRES_USER> -d <POSTGRES_DB> --clean --if-exists /dev/stdin < .\backup_complete.dump
+```
+
+## Backup de la base de datos
+
+```powershell
+# Backup SQL
+docker compose --env-file .env exec -T postgres_db pg_dump -U <POSTGRES_USER> -d <POSTGRES_DB> > .\backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+
+# Backup formato dump
+docker compose --env-file .env exec -T postgres_db pg_dump -U <POSTGRES_USER> -d <POSTGRES_DB> -Fc > .\backup_$(Get-Date -Format "yyyyMMdd_HHmmss").dump
 ```
 
 ---
@@ -182,12 +206,19 @@ Proyecto_dev_sec_ops/
 
 ```bash
 # Rebuild completo
-docker compose down -v
-docker compose up --build -d
+docker compose --env-file .env down -v
+docker compose --env-file .env up --build -d
 
 # Estado de servicios
-docker compose ps
+docker compose --env-file .env ps
 
 # Reiniciar solo backend
-docker compose restart backend_api
+docker compose --env-file .env restart backend_api
 ```
+
+---
+
+## Documentación adicional
+
+- Guía de deployment completa: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Documentación de base de datos: [docs/DATABASE.md](docs/DATABASE.md)

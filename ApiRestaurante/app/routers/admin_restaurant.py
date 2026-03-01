@@ -137,3 +137,23 @@ def update_restaurant(
     db.commit()
     db.refresh(restaurant)
     return restaurant
+
+
+@router.delete("/restaurant/{restaurant_id}")
+def delete_restaurant(
+    restaurant_id: UUID = Path(..., description="ID del restaurante a eliminar"),
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurante no encontrado")
+
+    if restaurant.admin_id != user["id"] and user["rol"].lower() != "admin":
+        raise HTTPException(status_code=403, detail="No autorizado para eliminar este restaurante")
+
+    db.delete(restaurant)
+    db.commit()
+
+    return {"message": "Restaurante eliminado correctamente"}

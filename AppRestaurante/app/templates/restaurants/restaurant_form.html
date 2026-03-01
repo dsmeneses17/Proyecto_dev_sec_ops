@@ -214,13 +214,21 @@ document.addEventListener("DOMContentLoaded", () => {
       body: formData
     });
 
-    let data;
+    const responseText = await response.text();
+    let data = null;
+
     try {
-      data = await response.json();
-    } catch (err) {
-      // Si no es JSON, intenta leer como texto
-      const text = await response.text();
-      mostrarAlerta("Error inesperado en la respuesta: " + text);
+      data = responseText ? JSON.parse(responseText) : null;
+    } catch (_err) {
+      mostrarAlerta("Error inesperado en la respuesta: " + responseText);
+      return;
+    }
+
+    if (!response.ok) {
+      const detail = data && data.detail
+        ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail))
+        : `Error HTTP ${response.status}`;
+      mostrarAlerta(detail);
       return;
     }
 

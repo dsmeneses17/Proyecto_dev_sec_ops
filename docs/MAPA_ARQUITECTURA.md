@@ -1,4 +1,4 @@
-# Mapa de Arquitectura — Proyecto DevSecOps Restaurante
+# Mapa de Arquitectura — Proyecto  Restaurante
 
 ## 1) Vista general
 

@@ -1,119 +1,118 @@
-from fastapi import APIRouter, Request, HTTPException,   Form
-import requests
+import json
+
+from fastapi import APIRouter, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
+
+from app.models.restaurant_model import RestaurantCreate, RestaurantOut
+from app.services.restaurant_service import (
+    create_or_update_restaurant,
+    delete_restaurant,
+    get_restaurant_by_id,
+)
+from app.services.storage import build_display_url
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
-from app.services.restaurant_service import enviar_a_backend_externo
-from app.services.storage import build_display_url
-from app.core.config import settings
-from app.models.restaurant_model import RestaurantCreate, RestaurantOut   # <-- corregido
-import logging
-from app.core.config import settings
-import json
 
 router = APIRouter()
 
-def get_headers(token: str):
-    """Genera headers con Authorization Bearer"""
-    # Limpiamos cualquier comilla accidental
-    token = token.strip().strip("'").strip('"')
-    return {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token.strip()}"
-    }
+
+def _safe_restaurant_cookie_value(value: str | None):
+    if value in ["None", "", None]:
+        return None
+    return value
+
+
+def _parse_horarios(raw_horarios: str):
+    try:
+        parsed = json.loads(raw_horarios)
+        if isinstance(parsed, dict):
+            return parsed
+        if parsed in [None, "", []]:
+            return {}
+        return {"raw": str(parsed)}
+    except Exception:
+        return {}
+
+
+def _prepare_restaurant_for_ui(restaurant_data: dict | None):
+    if not isinstance(restaurant_data, dict):
+        return restaurant_data
+
+    if restaurant_data.get("logo"):
+        restaurant_data["logo"] = build_display_url(restaurant_data["logo"])
+    return restaurant_data
 
 
 @router.get("/")
 def mostrar_dashboard_restaurante(request: Request):
-    # Obtener token y rol de cookies
     token = request.cookies.get("access_token")
     rol = request.cookies.get("rol")
-    restaurant_id = request.cookies.get("restaurant_id")
+    restaurant_id = _safe_restaurant_cookie_value(request.cookies.get("restaurant_id"))
+
     if not token or rol != "admin":
         return RedirectResponse(url="/", status_code=303)
 
-    # Llamar a la API para obtener los datos del restaurante del admin
-    try:
-        resp = requests.get(
-            f"{settings.BACKEND_URL}admin/restaurants/restaurant/{restaurant_id}",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-    except requests.exceptions.RequestException as e:
-        # Error en la llamada a la API
+    if not restaurant_id:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { "error": f"No se pudo conectar a la API: {e}",
-             **get_template_context(request)}
+            {**get_template_context(request)},
         )
 
-    if resp.status_code == 404:
-        # No hay restaurante registrado → mostrar formulario para crear
+    resultado = get_restaurant_by_id(token, restaurant_id)
+
+    if isinstance(resultado, dict) and resultado.get("error"):
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { **get_template_context(request)}
+            {"error": resultado.get("detalle", "No fue posible cargar restaurante"), **get_template_context(request)},
         )
 
-    if resp.status_code != 200:
-        # Otro error
+    if resultado is None:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { "error": f"Error {resp.status_code} al obtener datos", **get_template_context(request)}
+            {**get_template_context(request)},
         )
 
-    # API respondió correctamente
-    data = resp.json()
-    # Si la API devuelve una lista, tomar el primer elemento
-    restaurant_data = data[0] if isinstance(data, list) and len(data) > 0 else data
-    if isinstance(restaurant_data, dict) and restaurant_data.get("logo"):
-        restaurant_data["logo"] = build_display_url(restaurant_data["logo"])
+    restaurant_data = _prepare_restaurant_for_ui(resultado)
 
     return templates.TemplateResponse(
         "restaurants/restaurant.html",
-        { "restaurant": restaurant_data, **get_template_context(request)}  # 👈 nombre correcto
+        {"restaurant": restaurant_data, **get_template_context(request)},
     )
 
 @router.get("/restaurant_form", response_class=HTMLResponse)
 def restaurant_form(request: Request):
     token = request.cookies.get("access_token")
-    restaurant_id = request.cookies.get("restaurant_id")
-    if not token or not restaurant_id:
+    rol = request.cookies.get("rol")
+    restaurant_id = _safe_restaurant_cookie_value(request.cookies.get("restaurant_id"))
+
+    if not token or rol != "admin":
         return RedirectResponse(url="/", status_code=303)
 
-    # Llamar a la API
-    try:
-        resp = requests.get(
-            f"{settings.BACKEND_URL}admin/restaurants/restaurant/{restaurant_id}",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-       
-    except requests.exceptions.RequestException as e:
+    if not restaurant_id:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { "error": f"No se pudo conectar a la API: {e}",
-             **get_template_context(request)}
+            {**get_template_context(request)},
         )
 
-    if resp.status_code != 200:
+    resultado = get_restaurant_by_id(token, restaurant_id)
+    if isinstance(resultado, dict) and resultado.get("error"):
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { "error": f"Error {resp.status_code} al obtener datos",
-             **get_template_context(request)}
+            {"error": resultado.get("detalle", "No fue posible cargar restaurante"), **get_template_context(request)},
         )
 
-    restaurant_data = resp.json()
-    if isinstance(restaurant_data, dict) and restaurant_data.get("logo"):
-        restaurant_data["logo"] = build_display_url(restaurant_data["logo"])
-    print(restaurant_data)
+    restaurant_data = _prepare_restaurant_for_ui(resultado)
+
     return templates.TemplateResponse(
         "restaurants/restaurant_form.html",
-        { "restaurant": restaurant_data,
-         **get_template_context(request)}
+        {"restaurant": restaurant_data, **get_template_context(request)},
     )
 
 @router.post("/restaurant", response_model=RestaurantOut)
 def create_restaurant(
     request: Request,
+    response: Response,
     nombre: str = Form(...),
     slug: str = Form(...),
     logo: str = Form(""),
@@ -123,7 +122,7 @@ def create_restaurant(
     horarios: str = Form("{}")
 ):
     token = request.cookies.get("access_token")
-    restaurant_id = request.cookies.get("restaurant_id")
+    restaurant_id = _safe_restaurant_cookie_value(request.cookies.get("restaurant_id"))
     if not token:
         raise HTTPException(status_code=200, detail="Token requerido")
 
@@ -131,39 +130,58 @@ def create_restaurant(
     if not logo:
         raise HTTPException(status_code=400, detail="Debe cargar el logo del restaurante")
 
-    # convertir horarios si es JSON válido
+    horarios_dict = _parse_horarios(horarios)
+
+
     try:
-        horarios_dict = json.loads(horarios)
-    except Exception:
-        horarios_dict = {}
+        restaurant = RestaurantCreate(
+            id=restaurant_id,
+            nombre=nombre,
+            slug=slug,
+            logo=logo,
+            descripcion=descripcion,
+            telefono=telefono,
+            direccion=direccion,
+            horarios=horarios_dict,
+        )
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-
-    # NORMALIZAR AQUÍ
-    if restaurant_id in ["None", "", None]:
-        restaurant_id = None
-
-
-    restaurant = RestaurantCreate(
-        id=restaurant_id,
-        nombre=nombre,
-        slug=slug,
-        logo=logo,
-        descripcion=descripcion,
-        telefono=telefono,
-        direccion=direccion,
-        horarios=horarios_dict
-    )
-
-
-    resultado = enviar_a_backend_externo(restaurant, token)
+    resultado = create_or_update_restaurant(restaurant, token)
     if "error" in resultado:
         raise HTTPException(status_code=200, detail=resultado)
 
-    return resultado  # devuelve JSON con el restaurante creado
+    restaurant_id_result = resultado.get("id")
+    restaurant_slug_result = resultado.get("slug")
+
+    if restaurant_id_result:
+        response.set_cookie("restaurant_id", str(restaurant_id_result), path="/")
+    if restaurant_slug_result:
+        response.set_cookie("restaurant_slug", str(restaurant_slug_result), path="/")
+
+    return resultado
+
+
+@router.post("/restaurant/delete")
+def eliminar_restaurante(request: Request):
+    token = request.cookies.get("access_token")
+    restaurant_id = _safe_restaurant_cookie_value(request.cookies.get("restaurant_id"))
+
+    if not token or not restaurant_id:
+        return RedirectResponse(url="/restaurants/restaurant_form", status_code=303)
+
+    resultado = delete_restaurant(token, restaurant_id)
+    if isinstance(resultado, dict) and resultado.get("error"):
+        raise HTTPException(status_code=400, detail=resultado.get("detalle", "No se pudo eliminar el restaurante"))
+
+    redirect = RedirectResponse(url="/restaurants/restaurant_form", status_code=303)
+    redirect.delete_cookie("restaurant_id")
+    redirect.delete_cookie("restaurant_slug")
+    return redirect
 
 
 
 @router.post("/send") 
 def send_data(data: dict): 
-    return enviar_a_backend_externo(data)
+    return create_or_update_restaurant(data)

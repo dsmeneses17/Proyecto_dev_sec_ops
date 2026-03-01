@@ -126,6 +126,11 @@
 
   <div class="actions">
     <a href="/restaurants/restaurant_form" class="btn btn-primary">✏️ Editar</a>
+    <form action="/restaurants/restaurant/delete" method="post" style="display:inline; margin-left: 8px;">
+      <button type="submit" class="btn btn-danger" onclick="return confirm('¿Seguro que deseas eliminar este restaurante? Esta acción no se puede deshacer.');">
+        🗑️ Eliminar
+      </button>
+    </form>
   </div>
 
 </div>
