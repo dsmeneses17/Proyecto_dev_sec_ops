@@ -79,10 +79,10 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
 
    
 
-    # Cliente → dashboard cliente
+    # Cliente → menú público
     if rol == "cliente":
-        redirect = RedirectResponse(url="/cliente_dashboard.html", status_code=303)
-        redirect.set_cookie("access_token", token, httponly=True, secure=True)
+        redirect = RedirectResponse(url="/menu", status_code=303)
+        redirect.set_cookie("access_token", token, httponly=True, secure=False, path="/")
         redirect.set_cookie("rol", rol)
         redirect.set_cookie("user_id", str(user_id))
         redirect.set_cookie("restaurant_id", str(restaurant_id))
