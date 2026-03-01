@@ -17,11 +17,14 @@
 
     <p class="text-muted">{{ url_publica }}</p>
 
-    <a href="data:image/png;base64,{{ qr_base64 }}"
-       download="menu-qr.png"
-       class="btn btn-primary">
-        Descargar QR
-    </a>
+    <div class="d-flex gap-2 justify-content-center flex-wrap">
+      <a href="{{ qr_png_download_url }}" class="btn btn-primary">
+          Descargar QR PNG
+      </a>
+      <a href="{{ qr_svg_download_url }}" class="btn btn-outline-primary">
+          Descargar QR SVG
+      </a>
+    </div>
 
 </div>
 
