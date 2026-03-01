@@ -3,9 +3,14 @@ from contextlib import asynccontextmanager
 import signal
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from limits.storage import MemoryStorage
+from limits.strategies import MovingWindowRateLimiter
+from limits import parse as parse_rate_limit
+
 from app.routers import public_menu
 from app.routers import register_owner
 from.utils.templates import get_template_context
@@ -80,6 +85,31 @@ async def lifespan(app_instance: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# ---------------------------------------------------------------------------
+# Rate limiter – 100 requests per minute per client IP  (RNF-04)
+# ---------------------------------------------------------------------------
+_storage = MemoryStorage()
+_strategy = MovingWindowRateLimiter(_storage)
+_rate = parse_rate_limit("100/minute")
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests that exceed 100 req/min per client IP."""
+
+    async def dispatch(self, request: Request, call_next):
+        client_ip = (request.client.host if request.client else "127.0.0.1")
+        key = f"rate_limit:{client_ip}"
+
+        if not _strategy.hit(_rate, key):
+            return JSONResponse(
+                status_code=429,
+                content={"error": "Rate limit exceeded: 100 per 1 minute"},
+            )
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware)
 
 # Archivos estáticos
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
