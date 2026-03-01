@@ -2,15 +2,14 @@
 -- PostgreSQL database dump
 --
 
-\restrict YFmA6gnhSUXv8JGu7Qt8OroAeqP5lobJ6uKsmICYdAI87W9gM4ELimPvt7m8elL
+\restrict KPU0PgJurQadzen6jVKFcUC1iWXX47t6yc3sXoRoZd35cRLSoTxbd7FdldEYsAs
 
--- Dumped from database version 18.1
--- Dumped by pg_dump version 18.1
+-- Dumped from database version 15.16 (Debian 15.16-1.pgdg13+1)
+-- Dumped by pg_dump version 15.16 (Debian 15.16-1.pgdg13+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
--- SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -98,7 +97,9 @@ CREATE TABLE public.restaurants (
     horarios json,
     creado_en timestamp with time zone DEFAULT now(),
     actualizado_en timestamp with time zone DEFAULT now(),
-    admin_id integer
+    admin_id integer,
+    qr_color_fg character varying(7) DEFAULT '#000000'::character varying NOT NULL,
+    qr_color_bg character varying(7) DEFAULT '#FFFFFF'::character varying NOT NULL
 );
 
 
@@ -134,7 +135,7 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
+ALTER TABLE public.users_id_seq OWNER TO postgres;
 
 --
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
@@ -163,9 +164,9 @@ COPY public."Categories" (id, restaurante_id, nombre, descripcion, posicion, act
 --
 
 COPY public.categories (id, restaurante_id, nombre, descripcion, posicion, activa, creado_en, actualizado_en) FROM stdin;
-5a0ba68c-de3e-479c-807e-ea8bee8582a7	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	sopas	Sopas de la casa	1	t	2026-02-13 07:00:55.854715-05	2026-02-13 15:58:10.170501-05
-f0369b3a-209e-4b59-81cf-d497b9921d35	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	categoira 1	otra preuba	33	t	2026-02-13 06:57:39.367014-05	2026-02-16 19:42:49.613792-05
-f4e424f8-e3a6-4046-9f0e-dda94fb64380	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	preuba 12345	otra preuba	2	t	2026-02-12 19:38:25.864594-05	2026-02-16 19:44:11.501741-05
+5a0ba68c-de3e-479c-807e-ea8bee8582a7	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	sopas	Sopas de la casa	1	t	2026-02-13 12:00:55.854715+00	2026-02-13 20:58:10.170501+00
+f0369b3a-209e-4b59-81cf-d497b9921d35	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	categoira 1	otra preuba	33	t	2026-02-13 11:57:39.367014+00	2026-02-17 00:42:49.613792+00
+f4e424f8-e3a6-4046-9f0e-dda94fb64380	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	preuba 12345	otra preuba	2	t	2026-02-13 00:38:25.864594+00	2026-02-17 00:44:11.501741+00
 \.
 
 
@@ -174,11 +175,11 @@ f4e424f8-e3a6-4046-9f0e-dda94fb64380	9dc24e18-08f9-42d4-83fc-bb4e40c4c968	preuba
 --
 
 COPY public.dishes (id, categoria_id, nombre, descripcion, precio, precio_oferta, imagen_url, disponible, destacado, etiquetas, posicion, creado_en, actualizado_en, eliminado_en) FROM stdin;
-0b41fc03-3689-49aa-ba8b-63d5b0497774	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	3	3.00	3.00	\N	t	f	{no}	3	2026-02-13 14:23:46.473362-05	2026-02-13 14:23:46.473362-05	\N
-9eeed5f5-aac0-4f90-ab6a-604537f2c9ef	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	d	3.00	\N	\N	t	f	{no}	5	2026-02-13 15:08:57.146766-05	2026-02-13 15:53:54.632267-05	\N
-87cb8c8f-32bf-4012-a5de-fefdf0848d1e	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	3	3.00	3.00	\N	t	f	{no}	4	2026-02-13 14:49:19.118656-05	2026-02-13 15:54:07.707323-05	\N
-48b05fc0-faf4-49a4-be31-6a8f42c8cf50	f4e424f8-e3a6-4046-9f0e-dda94fb64380	lentejas	plato fuerte	2.00	2.00	\N	t	f	{no}	2	2026-02-13 14:22:41.754277-05	2026-02-13 15:54:56.06418-05	\N
-0dfbc9ba-95bc-40b9-8bbb-8766a64a84c6	5a0ba68c-de3e-479c-807e-ea8bee8582a7	ajiaco	sopa bogotana	12500.00	12500.00	\N	t	f	{"Ajiaco santafereño"}	1	2026-02-13 14:22:40.322016-05	2026-02-13 15:55:38.756714-05	\N
+0b41fc03-3689-49aa-ba8b-63d5b0497774	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	3	3.00	3.00	\N	t	f	{no}	3	2026-02-13 19:23:46.473362+00	2026-02-13 19:23:46.473362+00	\N
+9eeed5f5-aac0-4f90-ab6a-604537f2c9ef	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	d	3.00	\N	\N	t	f	{no}	5	2026-02-13 20:08:57.146766+00	2026-02-13 20:53:54.632267+00	\N
+87cb8c8f-32bf-4012-a5de-fefdf0848d1e	f4e424f8-e3a6-4046-9f0e-dda94fb64380	fsdf	3	3.00	3.00	\N	t	f	{no}	4	2026-02-13 19:49:19.118656+00	2026-02-13 20:54:07.707323+00	\N
+48b05fc0-faf4-49a4-be31-6a8f42c8cf50	f4e424f8-e3a6-4046-9f0e-dda94fb64380	lentejas	plato fuerte	2.00	2.00	\N	t	f	{no}	2	2026-02-13 19:22:41.754277+00	2026-02-13 20:54:56.06418+00	\N
+0dfbc9ba-95bc-40b9-8bbb-8766a64a84c6	5a0ba68c-de3e-479c-807e-ea8bee8582a7	ajiaco	sopa bogotana	12500.00	12500.00	\N	t	f	{"Ajiaco santafereño"}	1	2026-02-13 19:22:40.322016+00	2026-02-13 20:55:38.756714+00	\N
 \.
 
 
@@ -186,8 +187,8 @@ COPY public.dishes (id, categoria_id, nombre, descripcion, precio, precio_oferta
 -- Data for Name: restaurants; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.restaurants (id, nombre, slug, descripcion, logo, telefono, direccion, horarios, creado_en, actualizado_en, admin_id) FROM stdin;
-9dc24e18-08f9-42d4-83fc-bb4e40c4c968	Proyecto materia	proyecto-materia	Trabajo de materia	https://images.pexels.com/photos/2619967/pexels-photo-2619967.jpeg	3125698574	cra 1 en el centro	{"raw": "{\\n\\"lunes\\":  \\"9 a.m. a 8 p.m.\\"\\n\\"martes\\": \\"10 a.m. a 10 p.m.\\"\\n\\"domingo\\": \\"11 a.m a 10 p.m.\\"\\n}"}	2026-02-12 16:57:51.920692-05	2026-02-16 19:34:51.892407-05	1
+COPY public.restaurants (id, nombre, slug, descripcion, logo, telefono, direccion, horarios, creado_en, actualizado_en, admin_id, qr_color_fg, qr_color_bg) FROM stdin;
+9dc24e18-08f9-42d4-83fc-bb4e40c4c968	Proyecto materia	proyecto-materia	Trabajo de materia	https://images.pexels.com/photos/2619967/pexels-photo-2619967.jpeg	3125698574	cra 1 en el centro	{"raw": "{\\n\\"lunes\\":  \\"9 a.m. a 8 p.m.\\"\\n\\"martes\\": \\"10 a.m. a 10 p.m.\\"\\n\\"domingo\\": \\"11 a.m a 10 p.m.\\"\\n}"}	2026-02-12 21:57:51.920692+00	2026-02-17 00:34:51.892407+00	1	#000000	#FFFFFF
 \.
 
 
@@ -289,5 +290,5 @@ ALTER TABLE ONLY public.restaurants
 -- PostgreSQL database dump complete
 --
 
-\unrestrict YFmA6gnhSUXv8JGu7Qt8OroAeqP5lobJ6uKsmICYdAI87W9gM4ELimPvt7m8elL
+\unrestrict KPU0PgJurQadzen6jVKFcUC1iWXX47t6yc3sXoRoZd35cRLSoTxbd7FdldEYsAs
 

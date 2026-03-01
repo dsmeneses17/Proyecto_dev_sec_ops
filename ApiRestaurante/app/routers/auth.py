@@ -18,9 +18,9 @@ router = APIRouter()
 
 
 @router.post("/login")
-def login(user_credentials: dict, db: Session = Depends(get_db)):
-    usuario = user_credentials["usuario"]
-    password = user_credentials["password"]
+def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+    usuario = user_credentials.usuario
+    password = user_credentials.password
 
     # Buscar usuario en la DB
     db_user = db.query(User).filter(User.usuario == usuario).first()
