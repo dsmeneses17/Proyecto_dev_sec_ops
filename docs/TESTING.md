@@ -38,23 +38,23 @@ El proyecto implementa una estrategia de pruebas en **tres niveles** (pirámide 
          ┌──────────────┐
          │   E2E (7)    │  ← Playwright (navegador real)
          ├──────────────┤
-         │ Contrato (6) │  ← FastAPI TestClient (in-process)
+         │Contrato (14) │  ← FastAPI TestClient (in-process)
          ├──────────────┤
-         │  Repos (7)   │  ← Postgres real vía SQLAlchemy
+         │  Repos (9)   │  ← Postgres real vía SQLAlchemy
          ├──────────────┤
-         │Servicios (21)│  ← Mocks puros (unittest.mock)
+         │Servicios (27)│  ← Mocks puros (unittest.mock)
          └──────────────┘
               Base
 ```
 
 | Nivel | Framework | BD necesaria | Velocidad | Cantidad |
 |---|---|---|---|---|
-| Unitario — Servicios (ApiRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 8 tests |
-| Unitario — Servicios (AppRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 13 tests |
-| Repositorios | pytest + SQLAlchemy | ✅ Postgres | 🔄 Media | 7 tests |
-| Contrato API | pytest + FastAPI `TestClient` | ✅ Postgres | 🔄 Media | 6 tests |
+| Unitario — Servicios (ApiRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 10 tests |
+| Unitario — Servicios (AppRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 17 tests |
+| Repositorios | pytest + SQLAlchemy | ✅ Postgres | 🔄 Media | 9 tests |
+| Contrato API | pytest + FastAPI `TestClient` | ✅ Postgres | 🔄 Media | 14 tests |
 | E2E | Playwright (TypeScript) | ✅ Docker Compose completo | 🐢 Lenta | 7 tests |
-| **Total** | | | | **41 tests** |
+| **Total** | | | | **57 tests** |
 
 ---
 
@@ -74,6 +74,7 @@ Restaurante/
 │       ├── test_repositories_categories.py    # Repositorio — categorías (Postgres)
 │       ├── test_repositories_dishes.py        # Repositorio — platos (Postgres)
 │       ├── test_api_auth_login.py             # Contrato API — login
+│       ├── test_api_auth_register.py          # Contrato API — registro de usuarios (RF02)
 │       └── test_api_contract_public_menu.py   # Contrato API — menú público
 │
 ├── AppRestaurante/
@@ -108,15 +109,19 @@ Restaurante/
 
 Estas pruebas validan la **lógica de negocio** de la capa de servicios, aislándola completamente de la base de datos y dependencias externas.
 
-#### `test_services_auth_service.py` (2 tests)
+#### `test_services_auth_service.py` (4 tests)
 
 | # | Caso de Prueba | Qué valida |
 |---|---|---|
 | 1 | `test_register_user_raises_when_username_exists` | Que al intentar registrar un usuario con nombre de usuario ya existente, se lanza la excepción `UsernameAlreadyExists` |
-| 2 | `test_authenticate_invalid_password` | Que al autenticar con contraseña incorrecta, se lanza la excepción `InvalidCredentials` |
+| 2 | `test_register_user_raises_when_email_exists` | Que al intentar registrar con un email ya existente, se lanza la excepción `EmailAlreadyExists` |
+| 3 | `test_register_user_success_calls_repo` | Que al registrar con datos válidos, se invoca `users_repo.create` con `nombre_completo`, `usuario`, `email`, `rol` y `password_hash` |
+| 4 | `test_authenticate_invalid_password` | Que al autenticar con contraseña incorrecta, se lanza la excepción `InvalidCredentials` |
 
 **Mocks utilizados:**
 - `users_repo.get_by_username` → simula que el usuario existe o no
+- `users_repo.get_by_email` → simula que el email existe o no
+- `users_repo.create` → verifica parámetros de creación
 - `verify_password` → simula que la contraseña es incorrecta
 
 #### `test_services_category_service.py` (2 tests)
@@ -150,11 +155,13 @@ Estas pruebas validan la **lógica de negocio** de la capa de servicios, aislán
 
 Estas pruebas validan que la **capa de acceso a datos** (SQLAlchemy) interactúa correctamente con la base de datos PostgreSQL real. Cada test crea datos, los consulta y verifica la integridad.
 
-#### `test_repositories_users.py` (1 test)
+#### `test_repositories_users.py` (3 tests)
 
 | # | Caso de Prueba | Qué valida |
 |---|---|---|
 | 1 | `test_users_create_and_get_by_username` | Crear un usuario y luego recuperarlo por nombre de usuario. Verifica que el `id` y `usuario` coinciden |
+| 2 | `test_users_get_by_email` | Crear un usuario con email y recuperarlo con `get_by_email`. Verifica búsqueda case-insensitive |
+| 3 | `test_users_get_by_email_not_found` | Que `get_by_email` retorna `None` cuando no hay coincidencia |
 
 #### `test_repositories_restaurants.py` (2 tests)
 
@@ -198,6 +205,19 @@ Estas pruebas validan los **endpoints HTTP** de la API REST. Utilizan `TestClien
 | 2 | `test_auth_login_unknown_user_is_404` | `/api/v1/auth/login` | POST | 404 | Usuario inexistente retorna 404 |
 | 3 | `test_auth_login_wrong_password_is_401` | `/api/v1/auth/login` | POST | 401 | Contraseña incorrecta retorna 401 |
 
+#### `test_api_auth_register.py` (8 tests) — RF02
+
+| # | Caso de Prueba | Endpoint | Método | Status esperado | Qué valida |
+|---|---|---|---|---|---|
+| 1 | `test_register_success` | `/api/v1/auth/register` | POST | 200 | Registro exitoso retorna `message`, `user_id` y `rol` |
+| 2 | `test_register_duplicate_username` | `/api/v1/auth/register` | POST | 400 | Usuario duplicado retorna 400 con `detail: "Usuario ya existe"` |
+| 3 | `test_register_duplicate_email` | `/api/v1/auth/register` | POST | 400 | Email duplicado retorna 400 con `detail: "El email ya está registrado"` |
+| 4 | `test_register_missing_nombre` | `/api/v1/auth/register` | POST | 422 | Nombre vacío falla la validación Pydantic |
+| 5 | `test_register_invalid_email` | `/api/v1/auth/register` | POST | 422 | Email sin formato válido falla la validación |
+| 6 | `test_register_short_password` | `/api/v1/auth/register` | POST | 422 | Contraseña menor a 6 caracteres falla la validación |
+| 7 | `test_register_short_username` | `/api/v1/auth/register` | POST | 422 | Usuario menor a 3 caracteres falla la validación |
+| 8 | `test_register_then_login` | `/api/v1/auth/register` + `/api/v1/auth/login` | POST | 200 | Flujo completo: registrar usuario y luego autenticarse exitosamente |
+
 #### `test_api_contract_public_menu.py` (3 tests)
 
 | # | Caso de Prueba | Endpoint | Método | Status esperado | Qué valida |
@@ -216,7 +236,7 @@ Estas pruebas validan los **endpoints HTTP** de la API REST. Utilizan `TestClien
 
 Estas pruebas validan la capa de servicios del **frontend** (AppRestaurante), que se comunica con la API backend vía HTTP. Se simula la respuesta HTTP del backend con objetos `_FakeResponse`.
 
-#### `test_services_auth_service.py` (4 tests)
+#### `test_services_auth_service.py` (8 tests)
 
 | # | Caso de Prueba | Qué valida |
 |---|---|---|
@@ -224,6 +244,10 @@ Estas pruebas validan la capa de servicios del **frontend** (AppRestaurante), qu
 | 2 | `test_autenticar_usuario_invalid_credentials` | Credenciales inválidas (401): retorna `{"error": "Credenciales inválidas"}` |
 | 3 | `test_register_owner_with_restaurant_backend_error_detail` | Error del backend (400): extrae el `detail` del JSON de error |
 | 4 | `test_register_owner_with_restaurant_connection_error` | Error de conexión al backend: retorna `{"error": "No se pudo conectar al servidor"}` |
+| 5 | `test_register_client_success` | Registro de cliente exitoso: verifica que retorna `{"ok": True}` y envía los campos correctos al backend |
+| 6 | `test_register_client_duplicate_error` | Registro con datos duplicados (400): retorna el mensaje de error del backend |
+| 7 | `test_register_client_validation_error` | Validación fallida (422): retorna mensaje genérico "Datos inválidos" |
+| 8 | `test_register_client_connection_error` | Error de conexión: retorna `{"error": "No se pudo conectar al servidor"}` |
 
 #### `test_services_categoria_service.py` (3 tests)
 
@@ -510,7 +534,8 @@ npx playwright show-report
 | Componente | Capa | Tests Unitarios | Tests Integración | Tests E2E |
 |---|---|---|---|---|
 | **Autenticación (login)** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_login` | ✅ `auth.spec.ts` |
-| **Registro de propietario** | Backend API | ✅ `test_services_auth_service` | — | ✅ `auth.spec.ts` |
+| **Registro de propietario** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_register` | ✅ `auth.spec.ts` |
+| **Registro de cliente (RF02)** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_register` | — |
 | **Restaurantes (CRUD)** | Backend API | ✅ `test_services_restaurant_service` | ✅ `test_repositories_restaurants` | — |
 | **Categorías (CRUD)** | Backend API | ✅ `test_services_category_service` | ✅ `test_repositories_categories` | ✅ `crud.spec.ts` |
 | **Platos (CRUD)** | Backend API | — | ✅ `test_repositories_dishes` | ✅ `crud.spec.ts` |
@@ -526,11 +551,13 @@ npx playwright show-report
 
 ## 8. Resumen de Casos de Prueba
 
-### ApiRestaurante — Servicios (8 tests, sin BD)
+### ApiRestaurante — Servicios (10 tests, sin BD)
 
 | Archivo | Test | Resultado esperado |
 |---|---|---|
 | `test_services_auth_service.py` | `test_register_user_raises_when_username_exists` | `UsernameAlreadyExists` |
+| `test_services_auth_service.py` | `test_register_user_raises_when_email_exists` | `EmailAlreadyExists` |
+| `test_services_auth_service.py` | `test_register_user_success_calls_repo` | Invoca `users_repo.create` con todos los campos |
 | `test_services_auth_service.py` | `test_authenticate_invalid_password` | `InvalidCredentials` |
 | `test_services_category_service.py` | `test_create_category_raises_when_name_exists` | `CategoryNameAlreadyExists` |
 | `test_services_category_service.py` | `test_create_category_calls_repo_create` | Retorna categoría creada |
@@ -539,11 +566,13 @@ npx playwright show-report
 | `test_services_restaurant_service.py` | `test_create_restaurant_raises_when_slug_exists` | `RestaurantSlugAlreadyExists` |
 | `test_services_restaurant_service.py` | `test_create_restaurant_returns_payload_when_slug_free` | Payload con slug, admin_id, telefono |
 
-### ApiRestaurante — Repositorios (7 tests, con Postgres)
+### ApiRestaurante — Repositorios (9 tests, con Postgres)
 
 | Archivo | Test | Resultado esperado |
 |---|---|---|
 | `test_repositories_users.py` | `test_users_create_and_get_by_username` | Usuario creado y recuperado por username |
+| `test_repositories_users.py` | `test_users_get_by_email` | Usuario recuperado por email (case-insensitive) |
+| `test_repositories_users.py` | `test_users_get_by_email_not_found` | `None` cuando el email no existe |
 | `test_repositories_restaurants.py` | `test_restaurants_list_slugs` | Slugs ordenados alfabéticamente |
 | `test_repositories_restaurants.py` | `test_restaurants_get_by_slug` | Restaurante recuperado por slug |
 | `test_repositories_categories.py` | `test_categories_create_and_list_by_restaurant` | Categorías ordenadas por posición |
@@ -551,18 +580,26 @@ npx playwright show-report
 | `test_repositories_dishes.py` | `test_dishes_create_and_list_by_category` | Platos ordenados por posición |
 | `test_repositories_dishes.py` | `test_dishes_get_by_id` | Plato recuperado por ID |
 
-### ApiRestaurante — Contrato API (6 tests, con Postgres)
+### ApiRestaurante — Contrato API (14 tests, con Postgres)
 
 | Archivo | Test | Endpoint | Status |
 |---|---|---|---|
 | `test_api_auth_login.py` | `test_auth_login_success_returns_token` | `POST /api/v1/auth/login` | 200 |
 | `test_api_auth_login.py` | `test_auth_login_unknown_user_is_404` | `POST /api/v1/auth/login` | 404 |
 | `test_api_auth_login.py` | `test_auth_login_wrong_password_is_401` | `POST /api/v1/auth/login` | 401 |
+| `test_api_auth_register.py` | `test_register_success` | `POST /api/v1/auth/register` | 200 |
+| `test_api_auth_register.py` | `test_register_duplicate_username` | `POST /api/v1/auth/register` | 400 |
+| `test_api_auth_register.py` | `test_register_duplicate_email` | `POST /api/v1/auth/register` | 400 |
+| `test_api_auth_register.py` | `test_register_missing_nombre` | `POST /api/v1/auth/register` | 422 |
+| `test_api_auth_register.py` | `test_register_invalid_email` | `POST /api/v1/auth/register` | 422 |
+| `test_api_auth_register.py` | `test_register_short_password` | `POST /api/v1/auth/register` | 422 |
+| `test_api_auth_register.py` | `test_register_short_username` | `POST /api/v1/auth/register` | 422 |
+| `test_api_auth_register.py` | `test_register_then_login` | `POST /api/v1/auth/register` + `login` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_restaurants_contract` | `GET /api/v1/public/menu/restaurants` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_by_slug_contract` | `GET /api/v1/public/menu/{slug}` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_unknown_slug_is_404` | `GET /api/v1/public/menu/{slug}` | 404 |
 
-### AppRestaurante — Servicios (13 tests, sin BD)
+### AppRestaurante — Servicios (17 tests, sin BD)
 
 | Archivo | Test | Resultado esperado |
 |---|---|---|
@@ -570,6 +607,10 @@ npx playwright show-report
 | `test_services_auth_service.py` | `test_autenticar_usuario_invalid_credentials` | `{"error": "Credenciales inválidas"}` |
 | `test_services_auth_service.py` | `test_register_owner_with_restaurant_backend_error_detail` | `{"error": "no"}` |
 | `test_services_auth_service.py` | `test_register_owner_with_restaurant_connection_error` | `{"error": "No se pudo conectar al servidor"}` |
+| `test_services_auth_service.py` | `test_register_client_success` | `{"ok": True}` |
+| `test_services_auth_service.py` | `test_register_client_duplicate_error` | Retorna `detail` del error 400 |
+| `test_services_auth_service.py` | `test_register_client_validation_error` | `{"error": "Datos inválidos"}` |
+| `test_services_auth_service.py` | `test_register_client_connection_error` | `{"error": "No se pudo conectar al servidor"}` |
 | `test_services_categoria_service.py` | `test_get_headers_strips_quotes_and_spaces` | `Bearer abc` |
 | `test_services_categoria_service.py` | `test_list_categorias_non_200_returns_error` | `{"error": True, "status_code": 401}` |
 | `test_services_categoria_service.py` | `test_create_categoria_http_401_message` | Contiene "Token inválido" |
@@ -598,16 +639,18 @@ npx playwright show-report
 
 > **Fecha:** 28 de febrero de 2026  
 > **Branch:** `main`  
-> **Resultado:** ✅ 41/41 tests pasaron
+> **Resultado:** ✅ 57/57 tests pasaron
 
 ### Job 1: ApiRestaurante — pytest
 
 ```
 Step: Run service unit tests (fast)
-........                                                                 [100%]
-8 passed
+..........                                                               [100%]
+10 passed
 
 PASSED tests/test_services_auth_service.py::test_register_user_raises_when_username_exists
+PASSED tests/test_services_auth_service.py::test_register_user_raises_when_email_exists
+PASSED tests/test_services_auth_service.py::test_register_user_success_calls_repo
 PASSED tests/test_services_auth_service.py::test_authenticate_invalid_password
 PASSED tests/test_services_category_service.py::test_create_category_raises_when_name_exists
 PASSED tests/test_services_category_service.py::test_create_category_calls_repo_create
@@ -619,8 +662,8 @@ PASSED tests/test_services_restaurant_service.py::test_create_restaurant_returns
 
 ```
 Step: Run repository tests (Postgres)
-.......                                                                  [100%]
-7 passed
+.........                                                                [100%]
+9 passed
 
 PASSED tests/test_repositories_categories.py::test_categories_create_and_list_by_restaurant
 PASSED tests/test_repositories_categories.py::test_categories_get_by_id
@@ -629,16 +672,26 @@ PASSED tests/test_repositories_dishes.py::test_dishes_get_by_id
 PASSED tests/test_repositories_restaurants.py::test_restaurants_list_slugs
 PASSED tests/test_repositories_restaurants.py::test_restaurants_get_by_slug
 PASSED tests/test_repositories_users.py::test_users_create_and_get_by_username
+PASSED tests/test_repositories_users.py::test_users_get_by_email
+PASSED tests/test_repositories_users.py::test_users_get_by_email_not_found
 ```
 
 ```
 Step: Run API contract tests (in-process)
-......                                                                   [100%]
-6 passed
+..............                                                           [100%]
+14 passed
 
 PASSED tests/test_api_auth_login.py::test_auth_login_success_returns_token
 PASSED tests/test_api_auth_login.py::test_auth_login_unknown_user_is_404
 PASSED tests/test_api_auth_login.py::test_auth_login_wrong_password_is_401
+PASSED tests/test_api_auth_register.py::test_register_success
+PASSED tests/test_api_auth_register.py::test_register_duplicate_username
+PASSED tests/test_api_auth_register.py::test_register_duplicate_email
+PASSED tests/test_api_auth_register.py::test_register_missing_nombre
+PASSED tests/test_api_auth_register.py::test_register_invalid_email
+PASSED tests/test_api_auth_register.py::test_register_short_password
+PASSED tests/test_api_auth_register.py::test_register_short_username
+PASSED tests/test_api_auth_register.py::test_register_then_login
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_restaurants_contract
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_by_slug_contract
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_unknown_slug_is_404
@@ -648,13 +701,17 @@ PASSED tests/test_api_contract_public_menu.py::test_public_menu_unknown_slug_is_
 
 ```
 Step: Run tests
-.............                                                            [100%]
-13 passed
+.................                                                        [100%]
+17 passed
 
 PASSED tests/test_services_auth_service.py::test_autenticar_usuario_success
 PASSED tests/test_services_auth_service.py::test_autenticar_usuario_invalid_credentials
 PASSED tests/test_services_auth_service.py::test_register_owner_with_restaurant_backend_error_detail
 PASSED tests/test_services_auth_service.py::test_register_owner_with_restaurant_connection_error
+PASSED tests/test_services_auth_service.py::test_register_client_success
+PASSED tests/test_services_auth_service.py::test_register_client_duplicate_error
+PASSED tests/test_services_auth_service.py::test_register_client_validation_error
+PASSED tests/test_services_auth_service.py::test_register_client_connection_error
 PASSED tests/test_services_categoria_service.py::test_get_headers_strips_quotes_and_spaces
 PASSED tests/test_services_categoria_service.py::test_list_categorias_non_200_returns_error
 PASSED tests/test_services_categoria_service.py::test_create_categoria_http_401_message
@@ -685,4 +742,4 @@ Running 7 tests using 1 worker
 
 ---
 
-> **Total de casos de prueba: 41 tests** distribuidos en 4 niveles de la pirámide de testing (unitarios de servicios, repositorios, contrato API y E2E), ejecutados automáticamente en CI con cada push a `main` o pull request.
+> **Total de casos de prueba: 57 tests** distribuidos en 4 niveles de la pirámide de testing (unitarios de servicios, repositorios, contrato API y E2E), ejecutados automáticamente en CI con cada push a `main` o pull request.
