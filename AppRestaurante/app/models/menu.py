@@ -25,6 +25,8 @@ class RestaurantPublic(BaseModel):
     nombre: str
     logo_url: Optional[str]
     slug: str
+    qr_color_fg: str = "#000000"
+    qr_color_bg: str = "#FFFFFF"
 
 
 class PublicMenuResponse(BaseModel):

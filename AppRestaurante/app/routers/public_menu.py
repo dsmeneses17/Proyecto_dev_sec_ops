@@ -190,67 +190,40 @@ def exportar_qr_svg(request: Request, slug: str):
 
 @router.post("/qr-colors/{slug}")
 async def update_qr_colors(request: Request, slug: str):
-    """
-    Update QR colors for a restaurant
-    Only restaurant owners can update their QR colors
-    """
+    """Update QR colors for a restaurant. Only restaurant owners can update their QR colors."""
+    import logging
+
     # Get token from cookie or Authorization header
     token = request.cookies.get("access_token")
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-    
+
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
-
-    # Verify ownership
-    try:
-        from app.core.security import decode_token
-        payload = decode_token(token)
-        if not payload or "restaurant_id" not in payload:
-            raise HTTPException(status_code=403, detail="No autorizado")
-    except Exception:
-        raise HTTPException(status_code=403, detail="Token inválido")
-
-    # Get menu and verify restaurant
-    menu = get_public_menu(slug)
-    if not menu:
-        raise HTTPException(status_code=404, detail="Restaurante no encontrado")
-
-    if str(menu.restaurant.id) != str(payload["restaurant_id"]):
-        raise HTTPException(status_code=403, detail="No eres propietario de este restaurante")
 
     # Parse JSON body
     try:
         body = await request.json()
     except Exception:
-        raise HTTPException(status_code=400, detail="JSON inválido")
+        raise HTTPException(status_code=400, detail="JSON invalido")
 
-    # Validate colors format (hex #RRGGBB)
-    import re
-    hex_pattern = r"^#[0-9A-Fa-f]{6}$"
-    
     qr_color_fg = body.get("qr_color_fg", "#000000")
     qr_color_bg = body.get("qr_color_bg", "#FFFFFF")
 
-    if not re.match(hex_pattern, qr_color_fg):
-        raise HTTPException(status_code=400, detail="Color QR inválido")
-    if not re.match(hex_pattern, qr_color_bg):
-        raise HTTPException(status_code=400, detail="Color fondo inválido")
-
-    # Update restaurant colors via API
+    # Delegate to service
     try:
-        from app.services.restaurant_service import update_restaurant_colors
-        result = update_restaurant_colors(token, menu.restaurant.id, qr_color_fg, qr_color_bg)
-        
-        if "error" in result:
-            raise HTTPException(status_code=400, detail=result.get("detalle", "Error al actualizar colores"))
+        from app.services.qr_color_service import process_qr_color_update
+        result = process_qr_color_update(token, slug, qr_color_fg, qr_color_bg)
+    except Exception as exc:
+        logging.error("[QR_COLORS] Service error: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
-        return {"success": True, "message": "Colores actualizados correctamente"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        import logging
-        logging.error(f"Color update error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if result.get("error"):
+        raise HTTPException(
+            status_code=result.get("status_code", 400),
+            detail=result.get("detail", "Error"),
+        )
+
+    return {"success": True, "message": result.get("message", "OK")}

@@ -128,7 +128,7 @@ def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
 
 def update_restaurant_colors(token: str, restaurant_id: str, qr_color_fg: str, qr_color_bg: str):
     """
-    Update QR colors for a restaurant
+    Update QR colors for a restaurant via the dedicated PATCH endpoint.
     """
     try:
         payload = {
@@ -136,8 +136,11 @@ def update_restaurant_colors(token: str, restaurant_id: str, qr_color_fg: str, q
             "qr_color_bg": qr_color_bg,
         }
         
+        url = f"{BACKEND_URL}/{restaurant_id}/qr-colors"
+        logging.info("Updating QR colors at: %s", url)
+        
         response = requests.patch(
-            f"{BACKEND_URL}/{restaurant_id}",
+            url,
             headers=_build_headers(token),
             json=payload,
             timeout=10,

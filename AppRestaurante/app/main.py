@@ -80,13 +80,6 @@ async def lifespan(app_instance: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.middleware("http")
-async def log_all_requests(request: Request, call_next):
-    """Log every request for debugging"""
-    import logging
-    logging.warning(f"[ALL_REQUESTS] {request.method} {request.url.path}")
-    return await call_next(request)
-
 # Archivos estáticos
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -182,11 +175,7 @@ async def restaurant_form(request: Request):
 
 @app.middleware("http")
 async def jwt_middleware(request: Request, call_next):
-    import logging
-    logging.warning(f"[JWT_MIDDLEWARE] Path: {request.url.path}, Method: {request.method}, Is Public: {_is_public_path(request.url.path)}")
-    
     if _is_public_path(request.url.path):
-        logging.warning(f"[JWT_MIDDLEWARE] Allowing public path")
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")
