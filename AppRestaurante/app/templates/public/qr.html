@@ -131,7 +131,7 @@
             btnSaveColors.disabled = true;
             btnSaveColors.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
 
-            const response = await fetch(`/menu/${slug}/update-qr-colors`, {
+            const response = await fetch(`/qr-colors/${slug}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

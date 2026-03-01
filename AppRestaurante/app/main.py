@@ -80,7 +80,12 @@ async def lifespan(app_instance: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-
+@app.middleware("http")
+async def log_all_requests(request: Request, call_next):
+    """Log every request for debugging"""
+    import logging
+    logging.warning(f"[ALL_REQUESTS] {request.method} {request.url.path}")
+    return await call_next(request)
 
 # Archivos estáticos
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -88,7 +93,6 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Public paths that shouldn't require JWT cookies.
 PUBLIC_PATHS = [
-    "/",
     "/static",
     "/favicon.ico",
     "/api/v1/auth/login",
@@ -99,11 +103,12 @@ PUBLIC_PATHS = [
 ]
 
 def _is_public_path(request_path: str) -> bool:
-    """Check if a path is public, including special handling for QR color updates"""
-    if any(request_path.startswith(path) for path in PUBLIC_PATHS):
+    """Check if a path is public"""
+    # Exact match for root
+    if request_path == "/":
         return True
-    # Allow POST requests to /menu/{slug}/update-qr-colors
-    if "/menu/" in request_path and "update-qr-colors" in request_path:
+    # Prefix match for other paths
+    if any(request_path.startswith(path + "/") or request_path == path for path in PUBLIC_PATHS if path != "/"):
         return True
     return False
 # Plantillas HTML (shared)
@@ -177,8 +182,11 @@ async def restaurant_form(request: Request):
 
 @app.middleware("http")
 async def jwt_middleware(request: Request, call_next):
+    import logging
+    logging.warning(f"[JWT_MIDDLEWARE] Path: {request.url.path}, Method: {request.method}, Is Public: {_is_public_path(request.url.path)}")
     
     if _is_public_path(request.url.path):
+        logging.warning(f"[JWT_MIDDLEWARE] Allowing public path")
         return await call_next(request)
 
     auth_header = request.headers.get("Authorization")

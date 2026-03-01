@@ -187,13 +187,20 @@ def exportar_qr_svg(request: Request, slug: str):
     )
 
 
-@router.post("/menu/{slug}/update-qr-colors")
-def update_qr_colors(request: Request, slug: str, colors: QRColorUpdate):
+
+@router.post("/qr-colors/{slug}")
+async def update_qr_colors(request: Request, slug: str):
     """
     Update QR colors for a restaurant
     Only restaurant owners can update their QR colors
     """
+    # Get token from cookie or Authorization header
     token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+    
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
 
@@ -203,11 +210,7 @@ def update_qr_colors(request: Request, slug: str, colors: QRColorUpdate):
         payload = decode_token(token)
         if not payload or "restaurant_id" not in payload:
             raise HTTPException(status_code=403, detail="No autorizado")
-    except HTTPException:
-        raise
-    except Exception as e:
-        import logging
-        logging.error(f"Token decode error: {e}")
+    except Exception:
         raise HTTPException(status_code=403, detail="Token inválido")
 
     # Get menu and verify restaurant
@@ -218,12 +221,18 @@ def update_qr_colors(request: Request, slug: str, colors: QRColorUpdate):
     if str(menu.restaurant.id) != str(payload["restaurant_id"]):
         raise HTTPException(status_code=403, detail="No eres propietario de este restaurante")
 
+    # Parse JSON body
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+
     # Validate colors format (hex #RRGGBB)
     import re
     hex_pattern = r"^#[0-9A-Fa-f]{6}$"
     
-    qr_color_fg = colors.qr_color_fg
-    qr_color_bg = colors.qr_color_bg
+    qr_color_fg = body.get("qr_color_fg", "#000000")
+    qr_color_bg = body.get("qr_color_bg", "#FFFFFF")
 
     if not re.match(hex_pattern, qr_color_fg):
         raise HTTPException(status_code=400, detail="Color QR inválido")
