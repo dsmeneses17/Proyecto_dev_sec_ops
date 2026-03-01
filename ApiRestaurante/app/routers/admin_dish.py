@@ -8,6 +8,7 @@ from app.models.category import Category
 from app.models.restaurant import Restaurant
 from app.schemas.dish import DishCreate, DishUpdate, DishOut
 from app.core.security import get_current_user
+from app.utils.cache_manager import invalidate_menu_cache
 from typing import List
 from uuid import UUID
 from datetime import datetime
@@ -96,6 +97,14 @@ async def create_dish(payload: DishCreate, user=Depends(get_current_user), db: S
     db.add(new_dish)
     db.commit()
     db.refresh(new_dish)
+    
+    # Invalidate menu cache for the restaurant of this category
+    category = db.query(Category).filter(Category.id == new_dish.categoria_id).first()
+    if category:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == category.restaurante_id).first()
+        if restaurant:
+            invalidate_menu_cache(restaurant.slug)
+    
     return new_dish
 
 # Actualizar plato
@@ -108,6 +117,14 @@ async def update_dish(dish_id: UUID, payload: DishUpdate, user=Depends(get_curre
         setattr(dish, key, value)
     db.commit()
     db.refresh(dish)
+    
+    # Invalidate menu cache for the restaurant of this category
+    category = db.query(Category).filter(Category.id == dish.categoria_id).first()
+    if category:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == category.restaurante_id).first()
+        if restaurant:
+            invalidate_menu_cache(restaurant.slug)
+    
     return dish
 
 # Soft delete
@@ -118,6 +135,14 @@ async def delete_dish(dish_id: UUID, user=Depends(get_current_user), db: Session
         raise HTTPException(status_code=404, detail="Plato no encontrado")
     dish.eliminado_en = datetime.utcnow()
     db.commit()
+    
+    # Invalidate menu cache for the restaurant of this category
+    category = db.query(Category).filter(Category.id == dish.categoria_id).first()
+    if category:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == category.restaurante_id).first()
+        if restaurant:
+            invalidate_menu_cache(restaurant.slug)
+    
     return {"detail": "Plato eliminado correctamente"}
 
 # Cambiar disponibilidad
@@ -129,4 +154,12 @@ async def toggle_availability(dish_id: UUID, user=Depends(get_current_user), db:
     dish.disponible = not dish.disponible
     db.commit()
     db.refresh(dish)
+    
+    # Invalidate menu cache for the restaurant of this category
+    category = db.query(Category).filter(Category.id == dish.categoria_id).first()
+    if category:
+        restaurant = db.query(Restaurant).filter(Restaurant.id == category.restaurante_id).first()
+        if restaurant:
+            invalidate_menu_cache(restaurant.slug)
+    
     return dish

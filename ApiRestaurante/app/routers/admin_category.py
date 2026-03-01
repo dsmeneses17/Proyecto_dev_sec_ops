@@ -9,6 +9,7 @@ from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryOut, CategoryReorder
 from app.core.security import get_current_user, get_current_user_debug
+from app.utils.cache_manager import invalidate_menu_cache
 
 
 
@@ -100,6 +101,9 @@ async def create_category(
     db.commit()
     db.refresh(new_category)
 
+    # Invalidate menu cache for this restaurant
+    invalidate_menu_cache(restaurant.slug)
+
     return new_category
 
 
@@ -123,6 +127,14 @@ async def update_category(
 
     db.commit()
     db.refresh(category)
+    
+    # Invalidate menu cache for this restaurant
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.id == category.restaurante_id
+    ).first()
+    if restaurant:
+        invalidate_menu_cache(restaurant.slug)
+    
     return category
 
 
@@ -140,8 +152,18 @@ async def delete_category(
     if user["rol"].lower() != "admin":
         raise HTTPException(status_code=403, detail="No autorizado")
 
+    # Get restaurant before deleting category
+    restaurant = db.query(Restaurant).filter(
+        Restaurant.id == category.restaurante_id
+    ).first()
+
     db.delete(category)
     db.commit()
+    
+    # Invalidate menu cache for this restaurant
+    if restaurant:
+        invalidate_menu_cache(restaurant.slug)
+    
     return {"message": "Categoría eliminada"}
 
 
@@ -183,4 +205,8 @@ async def reorder_categories(
         category.posicion = posicion
 
     db.commit()
+    
+    # Invalidate menu cache for this restaurant
+    invalidate_menu_cache(restaurant.slug)
+    
     return {"message": "Categorías reordenadas exitosamente"}

@@ -6,16 +6,16 @@ from app.deps import get_db
 from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.models.dish import Dish
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import redis
 from redis.exceptions import RedisError
 from decimal import Decimal
+import threading
+from typing import Optional
+from app.cache import memory_cache, redis_client
 
 router = APIRouter(prefix="/api/v1/public/menu", tags=["public"])
-
-# In docker-compose we don't run Redis. Keep caching optional.
-redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 
 @router.get("/restaurants")
@@ -43,18 +43,33 @@ async def list_public_restaurants(db: Session = Depends(get_db)):
 
 @router.get("/{slug}")
 async def get_public_menu(slug: str, db: Session = Depends(get_db)):
+    """Get public menu for a restaurant by slug.
+    
+    Uses multi-layer caching strategy:
+    1. In-memory cache (fastest)
+    2. Redis cache (distributed, if available)
+    3. Database (cache miss)
+    """
 
     cache_key = f"public_menu:{slug}"
 
-    # Cache Hit 
-    try:
-        cached = redis_client.get(cache_key)
-        if cached:
-            return json.loads(cached)
-    except RedisError:
-        cached = None
+    # Layer 1: Try in-memory cache
+    cached = memory_cache.get(cache_key)
+    if cached:
+        return cached
 
-    # Cache Miss → consulta BD
+    # Layer 2: Try Redis cache
+    try:
+        redis_cached = redis_client.get(cache_key)
+        if redis_cached:
+            result = json.loads(redis_cached)
+            # Repopulate in-memory cache
+            memory_cache.set(cache_key, result)
+            return result
+    except (RedisError, json.JSONDecodeError):
+        pass
+
+    # Layer 3: Query database
     restaurant = db.query(Restaurant).filter(
         Restaurant.slug == slug
     ).first()
@@ -104,11 +119,13 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
             ]
         })
 
-    # Guardar en cache por 5 minutos 
+    # Store in caches
+    memory_cache.set(cache_key, response)
+    
     try:
         redis_client.setex(cache_key, 300, json.dumps(response))
     except (RedisError, TypeError):
-        # If Redis isn't available or response can't be serialized, just skip caching.
+        # If Redis isn't available, in-memory cache is sufficient
         pass
 
     return response
