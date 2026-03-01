@@ -1,11 +1,10 @@
 """Service for handling QR color updates."""
-import re
 import logging
+import re
 
 from app.core.security import decode_token
 from app.services.menu_service import get_public_menu
 from app.services.restaurant_service import update_restaurant_colors
-
 
 HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
@@ -13,7 +12,7 @@ HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 def process_qr_color_update(token: str, slug: str, qr_color_fg: str, qr_color_bg: str) -> dict:
     """
     Process QR color update request.
-    
+
     Returns dict with either:
         {"success": True, "message": "..."} on success
         {"error": True, "status_code": int, "detail": "..."} on failure

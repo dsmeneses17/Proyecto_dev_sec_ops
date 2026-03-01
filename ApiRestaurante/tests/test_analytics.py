@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 
 # ------------------------------------------------------------------ public
@@ -116,7 +114,7 @@ def test_stats_counts_recorded_views(client, make_user, make_restaurant):
 
 def test_stats_by_id_requires_ownership(client, make_user, make_restaurant):
     admin1 = make_user(usuario="admin1", password="adminpass", rol="admin")
-    other = make_user(usuario="other", password="otherpass", rol="cliente", email="o@test.com")
+    make_user(usuario="other", password="otherpass", rol="cliente", email="o@test.com")
     rest = make_restaurant(admin_id=admin1.id, slug="test-resto", nombre="Test Resto")
 
     token_other = _login(client, "other", "otherpass")
@@ -136,7 +134,7 @@ def test_stats_with_date_range_filters_breakdown(client, make_user, make_restaur
     admin = make_user(usuario="admin", password="adminpass", rol="admin")
     rest = make_restaurant(admin_id=admin.id, slug="test-resto", nombre="Test Resto")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Insert views at different dates: 2 old (15 days ago) + 3 recent (today)
     for i in range(2):
@@ -238,7 +236,7 @@ def test_stats_by_id_with_date_range(client, make_user, make_restaurant, db_sess
     admin = make_user(usuario="admin", password="adminpass", rol="admin")
     rest = make_restaurant(admin_id=admin.id, slug="test-resto", nombre="Test Resto")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i in range(4):
         db_session.add(MenuView(
             restaurant_id=rest.id,
@@ -366,7 +364,7 @@ def test_csv_export_with_date_filter(client, make_user, make_restaurant, db_sess
     admin = make_user(usuario="admin", password="adminpass", rol="admin")
     rest = make_restaurant(admin_id=admin.id, slug="test-resto", nombre="Test Resto")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # 2 old + 1 today
     db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="menu",
                             viewed_at=now - timedelta(days=20)))

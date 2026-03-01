@@ -1,6 +1,6 @@
 import requests
-from app.models.restaurant_model import RestaurantCreate
 
+from app.models.restaurant_model import RestaurantCreate
 
 # URL del backend
 BACKEND_URL = "http://backend:5000/api/v1/admin/restaurants"

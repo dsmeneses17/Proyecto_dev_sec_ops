@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from limits import parse as parse_rate_limit
 from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
-from limits import parse as parse_rate_limit
+from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.routers import auth, admin_category, admin_dish, admin_restaurant, public_menu, analytics
-
+from app.routers import admin_category, admin_dish, admin_restaurant, analytics, auth, public_menu
 
 # ---------------------------------------------------------------------------
 # Rate limiter – 100 requests per minute per client IP  (RNF-04)

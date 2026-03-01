@@ -1,29 +1,29 @@
+
 from pydantic import BaseModel
-from typing import List, Optional, Union
 
 
 class DishPublic(BaseModel):
     id: str
     nombre: str
-    descripcion: Optional[str]
+    descripcion: str | None
     precio: float
-    precio_oferta: Optional[float]
-    imagen_url: Optional[str]
-    destacado: Optional[bool]
+    precio_oferta: float | None
+    imagen_url: str | None
+    destacado: bool | None
     # Backend may return etiquetas as a list
-    etiquetas: Optional[Union[str, List[str]]]
+    etiquetas: str | list[str] | None
 
 
 class CategoryPublic(BaseModel):
     id: str
     nombre: str
-    platos: List[DishPublic]
+    platos: list[DishPublic]
 
 
 class RestaurantPublic(BaseModel):
     id: str
     nombre: str
-    logo_url: Optional[str]
+    logo_url: str | None
     slug: str
     qr_color_fg: str = "#000000"
     qr_color_bg: str = "#FFFFFF"
@@ -31,4 +31,4 @@ class RestaurantPublic(BaseModel):
 
 class PublicMenuResponse(BaseModel):
     restaurant: RestaurantPublic
-    categorias: List[CategoryPublic]
+    categorias: list[CategoryPublic]

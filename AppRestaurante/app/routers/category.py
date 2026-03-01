@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from app.ui.templates import templates
-from app.utils.templates import get_template_context
-import jwt
-from typing import Optional
 from types import SimpleNamespace
+
+import jwt
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+
 from app.services.categoria_service import (
-    list_categorias,
     create_categoria,
-    update_categoria,
     delete_categoria,
     get_categoria,
-    reorder_categorias
+    list_categorias,
+    update_categoria,
 )
+from app.ui.templates import templates
+from app.utils.templates import get_template_context
 
 router = APIRouter(tags=["categorias"])
 
@@ -47,13 +46,13 @@ def listar_categorias_json(request: Request):
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
-    
+
     try:
         categorias = list_categorias(token)
         # Transformamos a dict simple
         data = [{"id": c.get("id"), "nombre": c.get("nombre")} for c in categorias]
         return JSONResponse(content=data)
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
         return JSONResponse(content={"error": "No se pudieron cargar las categorías"}, status_code=500)
@@ -74,7 +73,7 @@ def editar_form(request: Request, categoria_id: str):
             "request": request,
             "categorias": categorias,
             "categoria": categoria,
-            **get_template_context(request)  
+            **get_template_context(request)
         }
     )
 
@@ -82,12 +81,12 @@ def editar_form(request: Request, categoria_id: str):
 def crear(
     request: Request,
     nombre: str = Form(...),
-    descripcion: Optional[str] = Form(None),
+    descripcion: str | None = Form(None),
     posicion: int = Form(...),
-    activa: Optional[bool] = Form(False),
-    categoriaId: Optional[str] = Form(None)
+    activa: bool | None = Form(False),
+    categoriaId: str | None = Form(None)
 ):
-    
+
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
@@ -114,9 +113,9 @@ def crear(
         "descripcion": descripcion,
         "posicion": posicion,
         "activa": activa,
-        "restaurante_id": restaurante_id  
+        "restaurante_id": restaurante_id
     }
-    
+
 
     if categoriaId:
         resultado = update_categoria(token, categoriaId, payload)
@@ -129,8 +128,8 @@ def crear(
         return templates.TemplateResponse(
             "categoria_form.html",
             {
-                "request": request, 
-                "categorias": categorias, 
+                "request": request,
+                "categorias": categorias,
                 "error": resultado["detalle"],
                 **get_template_context(request)}
         )
@@ -138,11 +137,11 @@ def crear(
     return templates.TemplateResponse(
         "categoria_form.html",
         {
-            "request": request, 
-            "categorias": categorias, 
+            "request": request,
+            "categorias": categorias,
             "success": "Operación realizada correctamente",
             **get_template_context(request)},
-        
+
     )
 
 @router.post("/editar/{categoria_id}", response_class=HTMLResponse)
@@ -150,9 +149,9 @@ def editar(
     request: Request,
     categoria_id: str,
     nombre: str = Form(...),
-    descripcion: Optional[str] = Form(None),
+    descripcion: str | None = Form(None),
     posicion: int = Form(...),
-    activa: Optional[bool] = Form(False),
+    activa: bool | None = Form(False),
 ):
     token = request.cookies.get("access_token")
     if not token:

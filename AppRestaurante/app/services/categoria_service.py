@@ -1,6 +1,7 @@
-import requests
 import logging
-from app.models.categoria_model import CategoriaCreate
+
+import requests
+
 from app.core.config import settings
 
 # URL del backend
@@ -37,11 +38,6 @@ def list_categorias(token: str):
             }
 
         return response.json()
-
-    except requests.exceptions.RequestException as e:
-        logging.error("Error al conectar con el backend: %s", str(e))
-        return {"error": True, "detalle": str(e), "status_code": None}
-
 
     except requests.exceptions.RequestException as e:
         logging.error("Error al conectar con el backend: %s", str(e))

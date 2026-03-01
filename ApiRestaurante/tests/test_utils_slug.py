@@ -1,11 +1,10 @@
 """Tests for app.utils.slug — pure slugify + DB-aware unique slug generation."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from app.utils.slug import slugify, generate_unique_slug
-
+from app.utils.slug import generate_unique_slug, slugify
 
 pytestmark = pytest.mark.no_db
 

@@ -3,8 +3,9 @@
 import hashlib
 import uuid
 
-from sqlalchemy import Column, String, Integer, TIMESTAMP, ForeignKey, func
+from sqlalchemy import TIMESTAMP, Column, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
+
 from app.db import Base
 
 

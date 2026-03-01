@@ -1,6 +1,8 @@
 # app/services/dish_service.py
-import requests
 import logging
+
+import requests
+
 from app.core.config import settings
 
 # URL del backend de platos
@@ -52,7 +54,7 @@ def get_dish(token: str, dish_id: str):
 
 def create_dish(token: str, payload: dict):
     response = requests.post(
-        BACKEND_URL, 
+        BACKEND_URL,
         json=payload,
         headers=get_headers(token),
         timeout=10

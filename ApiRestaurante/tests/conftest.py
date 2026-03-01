@@ -3,21 +3,17 @@ from __future__ import annotations
 import os
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
-
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.deps import get_db
-from app.models.user import User
-from app.models.restaurant import Restaurant
+from app.main import app
 from app.models.category import Category
 from app.models.dish import Dish
-from app.models.menu_view import MenuView
-
+from app.models.restaurant import Restaurant
+from app.models.user import User
 from app.utils.security import hash_password
 
 

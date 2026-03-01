@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.ui.templates import templates
 from app.services.auth_service import register_owner_with_restaurant
-
+from app.ui.templates import templates
 
 router = APIRouter()
 

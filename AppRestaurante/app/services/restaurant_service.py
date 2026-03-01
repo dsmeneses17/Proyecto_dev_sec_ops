@@ -6,7 +6,6 @@ import requests
 from app.core.config import settings
 from app.models.restaurant_model import RestaurantCreate
 
-
 BACKEND_URL = f"{settings.BACKEND_URL}admin/restaurants/restaurant"
 
 
@@ -135,10 +134,10 @@ def update_restaurant_colors(token: str, restaurant_id: str, qr_color_fg: str, q
             "qr_color_fg": qr_color_fg,
             "qr_color_bg": qr_color_bg,
         }
-        
+
         url = f"{BACKEND_URL}/{restaurant_id}/qr-colors"
         logging.info("Updating QR colors at: %s", url)
-        
+
         response = requests.patch(
             url,
             headers=_build_headers(token),

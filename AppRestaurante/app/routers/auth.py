@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
-from app.ui.templates import templates
+
 from app.services import auth_service
-from app.core.config import settings
+from app.ui.templates import templates
 
 router = APIRouter()
 
@@ -60,7 +59,7 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
             "login.html",
             {"request": request, "error": resultado["error"]}
         )
-    
+
     token = resultado["token"]
     rol = resultado["rol"]
     restaurant_id = resultado["restaurant_id"]
@@ -77,7 +76,7 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
         redirect.set_cookie("restaurant_slug", str(restaurant_slug))
         return redirect
 
-   
+
 
     # Cliente → menú público
     if rol == "cliente":
@@ -87,10 +86,10 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
         redirect.set_cookie("user_id", str(user_id))
         redirect.set_cookie("restaurant_id", str(restaurant_id))
         redirect.set_cookie("restaurant_slug", str(restaurant_slug))
-        
+
         return redirect
 
-    # Otros roles 
+    # Otros roles
     redirect = RedirectResponse(url="/", status_code=303)
     redirect.set_cookie("access_token", token, httponly=True, secure=True)
     redirect.set_cookie("rol", rol)

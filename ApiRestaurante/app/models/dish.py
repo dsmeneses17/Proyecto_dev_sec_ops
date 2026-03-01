@@ -1,8 +1,12 @@
-from sqlalchemy import Column, String, Text, Boolean, Integer, TIMESTAMP, ForeignKey, Numeric, func
-from sqlalchemy.dialects.postgresql import UUID as pgUUID, ARRAY
-from sqlalchemy.orm import relationship
-from app.db import Base
 import uuid
+
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import UUID as pgUUID
+from sqlalchemy.orm import relationship
+
+from app.db import Base
+
 
 class Dish(Base):
     __tablename__ = "dishes"   # en minúsculas y plural

@@ -1,9 +1,9 @@
 # app/core/security.py
 from datetime import datetime, timedelta
-from jose import jwt, JWTError 
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, Request, Header
 
+from fastapi import Depends, Header, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 
 SECRET_KEY = "tu_clave_secreta"
 ALGORITHM = "HS256"

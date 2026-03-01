@@ -10,7 +10,6 @@ from PIL import Image, UnidentifiedImageError
 
 from app.services.storage import StorageConfigurationError, upload_bytes_to_object_storage
 
-
 OUTPUT_FORMAT = "WEBP"
 OUTPUT_EXTENSION = ".webp"
 OUTPUT_CONTENT_TYPE = "image/webp"
@@ -99,7 +98,7 @@ class ImageWorkerPool:
 
         try:
             await asyncio.wait_for(self.queue.join(), timeout=self.config.shutdown_timeout_sec)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         for _ in self.worker_tasks:
@@ -135,7 +134,7 @@ class ImageWorkerPool:
 
         try:
             await asyncio.wait_for(self.queue.put(job), timeout=self.config.queue_put_timeout_sec)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise HTTPException(status_code=503, detail="La cola de procesamiento está llena.") from exc
 
         return await result_future

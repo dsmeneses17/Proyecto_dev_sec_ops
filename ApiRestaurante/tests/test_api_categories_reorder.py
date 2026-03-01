@@ -57,7 +57,7 @@ def test_reorder_categories_invalid_id(client, make_user, make_restaurant, make_
     """Reorder with non-existent category ID returns 404."""
     admin = make_user(usuario="admin_bad", rol="admin")
     restaurant = make_restaurant(admin_id=admin.id)
-    cat = make_category(restaurante_id=restaurant.id, nombre="Cat", posicion=1)
+    make_category(restaurante_id=restaurant.id, nombre="Cat", posicion=1)
 
     login_resp = client.post(
         "/api/v1/auth/login",

@@ -1,29 +1,26 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from uuid import UUID
-from typing import List
 
-
+from app.core.security import get_current_user
 from app.deps import get_db
-from app.models.restaurant import Restaurant
 from app.models.category import Category
-from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryOut, CategoryReorder
-from app.core.security import get_current_user, get_current_user_debug
+from app.models.restaurant import Restaurant
+from app.schemas.category import CategoryCreate, CategoryOut, CategoryReorder, CategoryUpdate
 from app.utils.cache_manager import invalidate_menu_cache
-
-
 
 router = APIRouter(
     prefix="",  # Sin prefijo aquí
     tags=["categorias"]
 )
 
-@router.get("/", response_model=List[CategoryOut])  # <- sin slash
+@router.get("/", response_model=list[CategoryOut])  # <- sin slash
 async def list_categories(
     user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-   
+
     restaurant = db.query(Restaurant).filter(
         Restaurant.admin_id == user["id"]
     ).first()
@@ -127,14 +124,14 @@ async def update_category(
 
     db.commit()
     db.refresh(category)
-    
+
     # Invalidate menu cache for this restaurant
     restaurant = db.query(Restaurant).filter(
         Restaurant.id == category.restaurante_id
     ).first()
     if restaurant:
         invalidate_menu_cache(restaurant.slug)
-    
+
     return category
 
 
@@ -159,11 +156,11 @@ async def delete_category(
 
     db.delete(category)
     db.commit()
-    
+
     # Invalidate menu cache for this restaurant
     if restaurant:
         invalidate_menu_cache(restaurant.slug)
-    
+
     return {"message": "Categoría eliminada"}
 
 
@@ -174,7 +171,7 @@ async def reorder_categories(
     user=Depends(get_current_user)
 ):
     """Reordenar categorías de un restaurante."""
-    
+
     if user["rol"].lower() != "admin":
         raise HTTPException(status_code=403, detail="No autorizado")
 
@@ -205,8 +202,8 @@ async def reorder_categories(
         category.posicion = posicion
 
     db.commit()
-    
+
     # Invalidate menu cache for this restaurant
     invalidate_menu_cache(restaurant.slug)
-    
+
     return {"message": "Categorías reordenadas exitosamente"}

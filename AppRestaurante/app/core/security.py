@@ -1,9 +1,10 @@
 # app/core/security.py
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
-from jose import jwt, JWTError 
-from fastapi.security import OAuth2PasswordBearer
+
 from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 # Configuración mínima
 SECRET_KEY = "tu_clave_secreta"

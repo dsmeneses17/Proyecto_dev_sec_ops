@@ -1,15 +1,14 @@
 """Frontend router for the analytics dashboard (RF22 / RF24 / CU-08)."""
 
 import logging
-from typing import Optional
 
 import requests as http_requests
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from app.core.config import settings
-from app.ui.templates import templates
 from app.services.analytics_service import get_analytics_stats
+from app.ui.templates import templates
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -19,8 +18,8 @@ BACKEND_EXPORT_URL = f"{settings.BACKEND_URL}analytics/export"
 @router.get("/export")
 def export_csv(
     request: Request,
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
+    start_date: str | None = Query(None),
+    end_date: str | None = Query(None),
 ):
     """CU-08 – Proxy the CSV download from the backend API."""
     token = request.cookies.get("access_token")
@@ -58,8 +57,8 @@ def export_csv(
 @router.get("/", response_class=HTMLResponse)
 def analytics_dashboard(
     request: Request,
-    start_date: Optional[str] = Query(None),
-    end_date: Optional[str] = Query(None),
+    start_date: str | None = Query(None),
+    end_date: str | None = Query(None),
 ):
     """Render the analytics page for the restaurant admin.
 

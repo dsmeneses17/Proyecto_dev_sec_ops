@@ -4,7 +4,6 @@ import pytest
 
 from app.services import restaurant_service
 
-
 pytestmark = pytest.mark.no_db
 
 

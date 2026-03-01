@@ -1,6 +1,7 @@
 import requests
+
 from app.core.config import settings
-from app.core.security import decode_token
+
 
 def autenticar_usuario(usuario: str, password: str):
     # Login al backend

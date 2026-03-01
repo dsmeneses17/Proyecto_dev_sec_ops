@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,9 +19,9 @@ class MenuViewOut(BaseModel):
     restaurant_id: UUID
     slug: str
     source: str
-    user_agent: Optional[str] = None
-    ip_hash: Optional[str] = None
-    referrer: Optional[str] = None
+    user_agent: str | None = None
+    ip_hash: str | None = None
+    referrer: str | None = None
     viewed_at: datetime
 
     class Config:
@@ -63,6 +62,6 @@ class MenuViewStats(BaseModel):
     device_breakdown: list[DeviceStat] = []
     browser_breakdown: list[DeviceStat] = []
     # RF24 – date-range metadata (only present when a custom range is used)
-    start_date: Optional[str] = None   # YYYY-MM-DD
-    end_date: Optional[str] = None     # YYYY-MM-DD
-    filtered_views: Optional[int] = None
+    start_date: str | None = None   # YYYY-MM-DD
+    end_date: str | None = None     # YYYY-MM-DD
+    filtered_views: int | None = None

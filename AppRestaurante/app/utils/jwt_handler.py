@@ -1,5 +1,6 @@
 # app/utils/jwt_handler.py
 from datetime import datetime, timedelta
+
 from jose import jwt
 
 SECRET_KEY = "tu_clave_secreta"

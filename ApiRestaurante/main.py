@@ -1,7 +1,6 @@
-import sys
-import os
 import asyncio
-from app.main import app
+import os
+import sys
 
 from uvicorn import Config, Server
 

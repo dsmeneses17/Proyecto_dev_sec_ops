@@ -1,9 +1,9 @@
 import json
 import re
-from typing import Any, Optional
+from typing import Any
 
 
-def from_json(value: Any) -> Optional[dict]:
+def from_json(value: Any) -> dict | None:
     """Parse a JSON string into a dict for use in Jinja templates.
 
     Returns None if parsing fails or if the decoded value isn't a JSON object.
@@ -21,7 +21,7 @@ def from_json(value: Any) -> Optional[dict]:
     if not text:
         return None
 
-    def _try_load(s: str) -> Optional[dict]:
+    def _try_load(s: str) -> dict | None:
         try:
             obj = json.loads(s)
         except Exception:

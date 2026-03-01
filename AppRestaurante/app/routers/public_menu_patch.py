@@ -2,7 +2,7 @@
     try:
         from app.services.restaurant_service import update_restaurant_colors
         result = update_restaurant_colors(token, menu.restaurant.id, qr_color_fg, qr_color_bg)
-        
+
         if "error" in result:
             raise HTTPException(status_code=400, detail=result.get("detalle", "Error al actualizar colores"))
 

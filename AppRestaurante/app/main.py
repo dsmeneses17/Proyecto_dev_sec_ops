@@ -1,31 +1,23 @@
 import asyncio
-from contextlib import asynccontextmanager
 import signal
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.middleware.base import BaseHTTPMiddleware
+from limits import parse as parse_rate_limit
 from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
-from limits import parse as parse_rate_limit
+from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.routers import public_menu
-from app.routers import register_owner
-from.utils.templates import get_template_context
 from app.core.config import settings
+from app.core.security import decode_token
+from app.routers import analytics as analytics_router
+from app.routers import auth, category, dish, public_menu, register_owner, restaurant, upload
+from app.services.image_worker_pool import ImageProcessingConfig, ImageWorkerPool
 from app.ui.templates import templates
 
-
-
-
-from app.routers import auth, restaurant, category, dish, upload
-from app.routers import analytics as analytics_router
-
-
-from app.core.security import decode_token
-from app.services.image_worker_pool import ImageProcessingConfig, ImageWorkerPool
+from .utils.templates import get_template_context
 
 
 def _register_shutdown_signal_handlers(shutdown_event: asyncio.Event):
@@ -156,15 +148,15 @@ def mostrar_login(request: Request):
 @app.get("/restaurant", response_class=HTMLResponse)
 async def restaurant_dashboard(request: Request):
     context = get_template_context(request)
-    return templates.TemplateResponse("restaurants/restaurant_form.html", 
+    return templates.TemplateResponse("restaurants/restaurant_form.html",
                                       { context })
 
 @app.get("/restaurant_form", response_class=HTMLResponse)
 async def restaurant_form(request: Request):
     token = request.cookies.get("access_token")
     restaurant_id = request.cookies.get("restaurant_id")
-    restaurant_slug = request.cookies.get("restaurant_slug")
-    user_id = request.cookies.get("user_id")
+    _ = request.cookies.get("restaurant_slug")  # kept for future use
+    _ = request.cookies.get("user_id")  # kept for future use
     context = get_template_context(request)
     if not token or not restaurant_id:
         # No autorizado → redirigir al login o dashboard
@@ -180,7 +172,7 @@ async def restaurant_form(request: Request):
     except requests.exceptions.RequestException as e:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            {"request": request, 
+            {"request": request,
              "error": f"No se pudo conectar a la API: {e}",
               "context": context}
         )
@@ -188,7 +180,7 @@ async def restaurant_form(request: Request):
     if resp.status_code != 200:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            { 
+            {
              "error": f"Error {resp.status_code} al obtener datos",
               **get_template_context(request)}
         )
@@ -239,7 +231,7 @@ async def jwt_middleware(request: Request, call_next):
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(restaurant.router, prefix="/restaurants", tags=["restaurantes"])
 app.include_router(category.router, prefix="/categories", tags=["categorias"])
-app.include_router(dish.router, prefix="/platos", tags=["platos"])  
+app.include_router(dish.router, prefix="/platos", tags=["platos"])
 app.include_router(upload.router, prefix="/uploads", tags=["uploads"])
 app.include_router(public_menu.router)
 app.include_router(register_owner.router)

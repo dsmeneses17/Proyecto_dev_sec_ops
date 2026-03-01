@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
 from app.models.user import User
 
 
-def get_by_username(db: Session, username: str) -> Optional[User]:
+def get_by_username(db: Session, username: str) -> User | None:
     return db.query(User).filter(User.usuario == username).first()
 
 
-def get_by_email(db: Session, email: str) -> Optional[User]:
+def get_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email.ilike(email.strip())).first()
 
 

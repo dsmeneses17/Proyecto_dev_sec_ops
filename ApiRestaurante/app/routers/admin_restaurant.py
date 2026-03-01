@@ -1,21 +1,19 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-from uuid import UUID
-from typing import List
 
+from app.core.security import get_current_user
 from app.deps import get_db
 from app.models.restaurant import Restaurant
 from app.schemas.restaurant import (
     RestaurantCreate,
-    RestaurantUpdate,
     RestaurantOut,
     RestaurantQRColorUpdate,
+    RestaurantUpdate,
 )
-from app.utils.slug import generate_unique_slug
-from app.core.security import get_current_user
 from app.utils.cache_manager import invalidate_menu_cache
-
-
+from app.utils.slug import generate_unique_slug
 
 router = APIRouter(
     prefix="",  # Sin prefijo aquí
@@ -51,7 +49,7 @@ def get_restaurant_by_id(
     Solo accesible para admins.
     """
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
-    
+
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
 
@@ -74,7 +72,7 @@ def create_or_update_restaurant(
         raise HTTPException(status_code=403, detail="No autorizado")
 
     # Convertimos todo a formato JSON serializable
-    data_dict = data.model_dump(mode="json")  
+    data_dict = data.model_dump(mode="json")
     # Esto convierte automáticamente UUID y HttpUrl a str
 
     # 🔹 UPDATE

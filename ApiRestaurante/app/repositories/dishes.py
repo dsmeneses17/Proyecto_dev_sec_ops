@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from app.models.dish import Dish
 
 
-def get_by_id(db: Session, dish_id) -> Optional[Dish]:
+def get_by_id(db: Session, dish_id) -> Dish | None:
     return db.query(Dish).filter(Dish.id == dish_id).first()
 
 

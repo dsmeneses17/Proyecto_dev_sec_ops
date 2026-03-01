@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.templating import Jinja2Templates
-from app.ui.templates import templates
-from fastapi.responses import HTMLResponse
-from fastapi.responses import RedirectResponse
-from app.services.menu_service import get_public_menu, list_public_restaurants
-from app.services.analytics_service import record_menu_view
-from pydantic import BaseModel
+import base64
+import io
 
 import qrcode
 import qrcode.image.svg
-import io
-import base64
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from pydantic import BaseModel
+
+from app.services.analytics_service import record_menu_view
+from app.services.menu_service import get_public_menu, list_public_restaurants
+from app.ui.templates import templates
 
 router = APIRouter()
 
@@ -27,7 +25,7 @@ def _build_public_menu_url(request: Request, slug: str) -> str:
 
 def _generate_qr_png_bytes(content: str, fill_color: str = "#000000", back_color: str = "#FFFFFF") -> bytes:
     """Generate QR code as PNG bytes with custom colors.
-    
+
     Args:
         content: The data to encode
         fill_color: Foreground color (hex code, e.g., "#000000")
@@ -36,7 +34,7 @@ def _generate_qr_png_bytes(content: str, fill_color: str = "#000000", back_color
     # Convert hex colors to RGB tuples
     fill_rgb = tuple(int(fill_color[i:i+2], 16) for i in (1, 3, 5))
     back_rgb = tuple(int(back_color[i:i+2], 16) for i in (1, 3, 5))
-    
+
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -45,7 +43,7 @@ def _generate_qr_png_bytes(content: str, fill_color: str = "#000000", back_color
     )
     qr.add_data(content)
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color=fill_rgb, back_color=back_rgb)
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
@@ -110,7 +108,7 @@ def ver_menu(request: Request, slug: str):
 def generar_qr(request: Request, slug: str):
 
     menu = get_public_menu(slug)
-    
+
     if not menu:
         return templates.TemplateResponse(
             "public/menu_not_found.html",
@@ -119,13 +117,13 @@ def generar_qr(request: Request, slug: str):
 
     # RF22 – record QR-page visualisation
     record_menu_view(slug, source="qr")
-    
+
     url_publica = _build_public_menu_url(request, slug)
-    
+
     # Get QR colors from menu data
     qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, 'qr_color_fg') else "#000000"
     qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, 'qr_color_bg') else "#FFFFFF"
-    
+
     png_bytes = _generate_qr_png_bytes(url_publica, fill_color=qr_color_fg, back_color=qr_color_bg)
     img_str = base64.b64encode(png_bytes).decode()
 
@@ -138,7 +136,7 @@ def generar_qr(request: Request, slug: str):
             payload = decode_token(token)
             if payload and "restaurant_id" in payload:
                 is_owner = str(menu.restaurant.id) == str(payload["restaurant_id"])
-        except:
+        except Exception:
             pass
 
     return templates.TemplateResponse(
@@ -160,19 +158,19 @@ def generar_qr(request: Request, slug: str):
 @router.get("/menu/{slug}/qr.png")
 def exportar_qr_png(request: Request, slug: str):
     menu = get_public_menu(slug)
-    
+
     if not menu:
         return templates.TemplateResponse(
             "public/menu_not_found.html",
             {"request": request}
         )
-    
+
     url_publica = _build_public_menu_url(request, slug)
-    
+
     # Get QR colors from menu data
     qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, 'qr_color_fg') else "#000000"
     qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, 'qr_color_bg') else "#FFFFFF"
-    
+
     png_bytes = _generate_qr_png_bytes(url_publica, fill_color=qr_color_fg, back_color=qr_color_bg)
     safe_slug = slug.replace(" ", "-")
     return Response(

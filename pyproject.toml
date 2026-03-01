@@ -1,0 +1,45 @@
+# ──────────────────────────────────────────────────────────────────────
+# Ruff – Python linter & formatter configuration  (RNF-06)
+# ──────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length    = 120
+
+# Only lint production / test code; skip caches & migrations
+include = ["ApiRestaurante/**/*.py", "AppRestaurante/**/*.py"]
+exclude = [
+    "**/__pycache__",
+    "**/z_crearTablas",
+    "**/migrations",
+    "**/public_menu_patch.py",
+]
+
+[tool.ruff.lint]
+# E  = pycodestyle errors
+# F  = pyflakes
+# W  = pycodestyle warnings
+# I  = isort (import sorting)
+# UP = pyupgrade
+# B  = flake8-bugbear
+select = ["E", "F", "W", "I", "UP", "B"]
+
+# Tolerate some patterns common in the codebase
+ignore = [
+    "E501",   # line-too-long  (handled by formatter, not blocker)
+    "E711",   # comparison to None  (SQLAlchemy filters use == None)
+    "E712",   # comparison to True/False  (same reason)
+    "B008",   # function call in default arg  (FastAPI Depends())
+    "B904",   # raise ... from err  (noisy in existing code)
+]
+
+# Allow auto-fix for all enabled rules
+fixable   = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style    = "double"
+indent-style   = "space"
+line-ending    = "lf"

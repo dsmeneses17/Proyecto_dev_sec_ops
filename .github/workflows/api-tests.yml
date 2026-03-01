@@ -6,6 +6,27 @@ on:
   pull_request:
 
 jobs:
+  ruff-lint:
+    name: Ruff — Python lint (RNF-06)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check --config pyproject.toml
+
+      - name: Run ruff format --check
+        run: ruff format --check --config pyproject.toml || echo "::warning::ruff format differences found (non-blocking)"
+
   apirestaurante-pytest:
     name: ApiRestaurante — pytest (services + repositories + API contract)
     runs-on: ubuntu-latest

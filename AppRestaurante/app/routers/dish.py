@@ -1,22 +1,14 @@
 # app/routers/dish.py
-from fastapi import APIRouter, Request, HTTPException, Form
+from types import SimpleNamespace
+
+import jwt
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+
+from app.services.dish_service import create_dish, delete_dish, get_dish, list_dishes, toggle_availability, update_dish
+from app.services.storage import build_display_url
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
-from typing import Optional
-from types import SimpleNamespace
-import jwt
-
-from app.services.dish_service import (
-    list_dishes,
-    get_dish,
-    create_dish,
-    update_dish,
-    delete_dish,
-    toggle_availability
-)
-from app.services.storage import build_display_url
 
 router = APIRouter(tags=["platos"])
 
@@ -38,7 +30,7 @@ def _sign_dish_images(categorias):
     return categorias
 
 
-def _parse_tags(checkbox_tags: Optional[list[str]], manual_tags: Optional[str]) -> list[str]:
+def _parse_tags(checkbox_tags: list[str] | None, manual_tags: str | None) -> list[str]:
     candidates: list[str] = []
 
     if checkbox_tags:
@@ -129,17 +121,17 @@ def editar_form(request: Request, dish_id: str):
 def crear(
     request: Request,
     nombre: str = Form(...),
-    descripcion: Optional[str] = Form(None),
+    descripcion: str | None = Form(None),
     precio: float = Form(...),
-    precio_oferta: Optional[float] = Form(None),
-    imagen_url: Optional[str] = Form(None),
+    precio_oferta: float | None = Form(None),
+    imagen_url: str | None = Form(None),
     categoria_id: str = Form(...),
-    disponible: Optional[bool] = Form(True),
-    destacado: Optional[bool] = Form(False),
-    etiquetas: Optional[list[str]] = Form(None),
-    etiquetas_manual: Optional[str] = Form(None),
-    posicion: Optional[int] = Form(None),
-    plato_id: Optional[str] = Form(None)
+    disponible: bool | None = Form(True),
+    destacado: bool | None = Form(False),
+    etiquetas: list[str] | None = Form(None),
+    etiquetas_manual: str | None = Form(None),
+    posicion: int | None = Form(None),
+    plato_id: str | None = Form(None)
 ):
     """
     Crea o actualiza un plato

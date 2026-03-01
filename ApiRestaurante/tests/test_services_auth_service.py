@@ -4,7 +4,6 @@ import pytest
 
 from app.services import auth_service
 
-
 pytestmark = pytest.mark.no_db  # These tests use mocks only — no DB needed
 
 

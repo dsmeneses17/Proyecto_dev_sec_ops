@@ -1,5 +1,4 @@
 from app.repositories import users as users_repo
-
 from app.utils.security import hash_password
 
 

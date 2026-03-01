@@ -1,8 +1,11 @@
-from sqlalchemy import Column, String, Text, Boolean, Integer, TIMESTAMP, ForeignKey, func
+import uuid
+
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
+
 from app.db import Base
-import uuid
+
 
 class Category(Base):
     __tablename__ = "categories"

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.repositories import restaurants as restaurants_repo
-from app.utils.slug import slugify, generate_unique_slug
+from app.utils.slug import generate_unique_slug
 
 
 class RestaurantServiceError(Exception):

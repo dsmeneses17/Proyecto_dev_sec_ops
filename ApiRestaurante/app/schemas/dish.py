@@ -1,27 +1,25 @@
-from pydantic import BaseModel, Field
-from pydantic import field_validator
-from typing import Optional, List
-from typing_extensions import Annotated
-from uuid import UUID
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
+from uuid import UUID
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class DishBase(BaseModel):
     nombre: str = Field(..., max_length=100)
-    descripcion: Optional[str] = Field(None, max_length=300)
+    descripcion: str | None = Field(None, max_length=300)
     precio: Decimal
-    precio_oferta: Optional[Decimal] = None
-    disponible: Optional[bool] = True
-    destacado: Optional[bool] = False
-    etiquetas: Optional[List[str]] = None
-    posicion: Optional[int] = None
-    imagen_url: Optional[str] = None
+    precio_oferta: Decimal | None = None
+    disponible: bool | None = True
+    destacado: bool | None = False
+    etiquetas: list[str] | None = None
+    posicion: int | None = None
+    imagen_url: str | None = None
     categoria_id: UUID
 
     @field_validator("etiquetas")
     @classmethod
-    def validate_etiquetas(cls, value: Optional[List[str]]):
+    def validate_etiquetas(cls, value: list[str] | None):
         if value is None:
             return value
 
@@ -48,9 +46,9 @@ class DishUpdate(DishBase):
 
 class DishOut(DishBase):
     id: UUID
-    creado_en: Optional[datetime]
-    actualizado_en: Optional[datetime]
-    eliminado_en: Optional[datetime]
+    creado_en: datetime | None
+    actualizado_en: datetime | None
+    eliminado_en: datetime | None
 
     class Config:
         from_attributes = True  # en Pydantic v2, reemplaza orm_mode

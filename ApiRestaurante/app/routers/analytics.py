@@ -5,27 +5,28 @@ from __future__ import annotations
 import csv
 import io
 import re
-from datetime import date as date_type, datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
+from datetime import date as date_type
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func as sa_func, cast, Date, extract
+from sqlalchemy import Date, cast, extract
+from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_user
 from app.deps import get_db
-from app.models.restaurant import Restaurant
 from app.models.menu_view import MenuView, _hash_ip
+from app.models.restaurant import Restaurant
 from app.schemas.menu_view import (
+    DeviceStat,
     MenuViewCreate,
-    MenuViewOut,
-    MenuViewStats,
     MenuViewDailyStat,
     MenuViewHourlyStat,
-    DeviceStat,
+    MenuViewOut,
+    MenuViewStats,
 )
-from app.core.security import get_current_user
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
@@ -104,10 +105,10 @@ def record_menu_view(
 def _build_stats(
     db: Session,
     restaurant: Restaurant,
-    start_date: Optional[date_type] = None,
-    end_date: Optional[date_type] = None,
+    start_date: date_type | None = None,
+    end_date: date_type | None = None,
 ) -> MenuViewStats:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     seven_days_ago = today_start - timedelta(days=7)
     thirty_days_ago = today_start - timedelta(days=30)
@@ -121,8 +122,8 @@ def _build_stats(
 
     # ---- date-range for the breakdowns (RF24) ----
     if start_date and end_date:
-        range_start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=timezone.utc)
-        range_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=timezone.utc)
+        range_start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=UTC)
+        range_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=UTC)
     else:
         range_start = thirty_days_ago
         range_end = now
@@ -205,8 +206,8 @@ def _build_stats(
 # ------------------------------------------------------------------ #
 @router.get("/stats", response_model=MenuViewStats)
 def get_menu_view_stats(
-    start_date: Optional[date_type] = Query(None, description="Inicio del rango (YYYY-MM-DD)"),
-    end_date: Optional[date_type] = Query(None, description="Fin del rango (YYYY-MM-DD)"),
+    start_date: date_type | None = Query(None, description="Inicio del rango (YYYY-MM-DD)"),
+    end_date: date_type | None = Query(None, description="Fin del rango (YYYY-MM-DD)"),
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -228,8 +229,8 @@ def get_menu_view_stats(
 @router.get("/stats/{restaurant_id}", response_model=MenuViewStats)
 def get_menu_view_stats_by_id(
     restaurant_id: UUID,
-    start_date: Optional[date_type] = Query(None, description="Inicio del rango (YYYY-MM-DD)"),
-    end_date: Optional[date_type] = Query(None, description="Fin del rango (YYYY-MM-DD)"),
+    start_date: date_type | None = Query(None, description="Inicio del rango (YYYY-MM-DD)"),
+    end_date: date_type | None = Query(None, description="Fin del rango (YYYY-MM-DD)"),
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -255,8 +256,8 @@ def get_menu_view_stats_by_id(
 # ------------------------------------------------------------------ #
 @router.get("/export")
 def export_csv(
-    start_date: Optional[date_type] = Query(None),
-    end_date: Optional[date_type] = Query(None),
+    start_date: date_type | None = Query(None),
+    end_date: date_type | None = Query(None),
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -271,8 +272,8 @@ def export_csv(
     if start_date and end_date:
         if start_date > end_date:
             raise HTTPException(status_code=400, detail="start_date debe ser anterior o igual a end_date")
-        range_start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=timezone.utc)
-        range_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=timezone.utc)
+        range_start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=UTC)
+        range_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=UTC)
         q = q.filter(MenuView.viewed_at >= range_start, MenuView.viewed_at <= range_end)
 
     rows = q.order_by(MenuView.viewed_at.desc()).all()

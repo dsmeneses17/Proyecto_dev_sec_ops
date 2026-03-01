@@ -1,6 +1,7 @@
 import requests
-from app.models.menu import PublicMenuResponse
+
 from app.core.config import settings
+from app.models.menu import PublicMenuResponse
 from app.services.storage import build_display_url
 
 # settings.BACKEND_URL already includes the trailing `/api/v1/`

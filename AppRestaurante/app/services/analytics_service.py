@@ -5,7 +5,9 @@ menu page is rendered so every visualisation is registered.
 """
 
 import logging
+
 import requests
+
 from app.core.config import settings
 
 ANALYTICS_URL = f"{settings.BACKEND_URL}analytics"

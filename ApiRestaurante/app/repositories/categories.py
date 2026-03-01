@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
 from app.models.category import Category
 
 
-def get_by_id(db: Session, category_id) -> Optional[Category]:
+def get_by_id(db: Session, category_id) -> Category | None:
     return db.query(Category).filter(Category.id == category_id).first()
 
 

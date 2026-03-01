@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+
 from app.core.config import settings
 from app.services.image_worker_pool import ImageWorkerPool
-
 
 router = APIRouter(tags=["uploads"])
 

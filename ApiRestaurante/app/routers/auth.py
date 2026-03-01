@@ -1,18 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
-from app.core.security import create_access_token, get_current_user, create_access_token, decode_token
+from fastapi import APIRouter, Depends, HTTPException
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from sqlalchemy.future import select
+
+from app.core.security import ALGORITHM, SECRET_KEY, create_access_token, get_current_user
+from app.deps import get_db
+from app.models.restaurant import Restaurant
+from app.models.user import User
+from app.schemas.user import UserCreate, UserLogin
 from app.utils.security import hash_password, verify_password
 from app.utils.slug import generate_unique_slug
-from app.models.user import User
-from app.deps import get_db
-from app.schemas.user import UserCreate, UserLogin, Token
-from app.core.security import  SECRET_KEY, ALGORITHM
-
-from jose import JWTError, jwt
-from app.models.restaurant import Restaurant
-
 
 router = APIRouter()
 
@@ -41,7 +37,7 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     if restaurant_id:
         restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     restaurant_slug = restaurant.slug if restaurant else None
-    
+
     # Crear token con info completa
     access_token = create_access_token(data={
         "sub": str(db_user.id),      # UUID del usuario como string

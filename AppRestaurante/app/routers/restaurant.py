@@ -182,6 +182,6 @@ def eliminar_restaurante(request: Request):
 
 
 
-@router.post("/send") 
-def send_data(data: dict): 
+@router.post("/send")
+def send_data(data: dict):
     return create_or_update_restaurant(data)

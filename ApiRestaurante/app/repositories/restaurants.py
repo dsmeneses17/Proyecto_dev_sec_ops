@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
 from app.models.restaurant import Restaurant
 
 
-def get_by_slug(db: Session, slug: str) -> Optional[Restaurant]:
+def get_by_slug(db: Session, slug: str) -> Restaurant | None:
     return db.query(Restaurant).filter(Restaurant.slug == slug).first()
 
 

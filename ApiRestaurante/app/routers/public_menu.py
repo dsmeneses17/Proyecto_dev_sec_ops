@@ -1,19 +1,17 @@
 # app/routers/public_menu.py
 
+import json
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException
+from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
+
+from app.cache import memory_cache, redis_client
 from app.deps import get_db
-from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.models.dish import Dish
-from datetime import datetime, timedelta
-import json
-import redis
-from redis.exceptions import RedisError
-from decimal import Decimal
-import threading
-from typing import Optional
-from app.cache import memory_cache, redis_client
+from app.models.restaurant import Restaurant
 
 router = APIRouter(prefix="/api/v1/public/menu", tags=["public"])
 
@@ -44,7 +42,7 @@ async def list_public_restaurants(db: Session = Depends(get_db)):
 @router.get("/{slug}")
 async def get_public_menu(slug: str, db: Session = Depends(get_db)):
     """Get public menu for a restaurant by slug.
-    
+
     Uses multi-layer caching strategy:
     1. In-memory cache (fastest)
     2. Redis cache (distributed, if available)
@@ -123,7 +121,7 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
 
     # Store in caches
     memory_cache.set(cache_key, response)
-    
+
     try:
         redis_client.setex(cache_key, 300, json.dumps(response))
     except (RedisError, TypeError):

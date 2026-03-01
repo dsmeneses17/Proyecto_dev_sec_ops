@@ -1,5 +1,5 @@
-from fastapi import Depends, HTTPException, Header
 import jwt
+from fastapi import Header, HTTPException
 
 SECRET_KEY = "tu_clave_secreta"
 ALGORITHM = "HS256"

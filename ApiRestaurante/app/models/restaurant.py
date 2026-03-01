@@ -1,8 +1,10 @@
-from sqlalchemy import Column, String, TIMESTAMP, Text, JSON, func, ForeignKey, Integer
+import uuid
+
+from sqlalchemy import JSON, TIMESTAMP, Column, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import relationship
+
 from app.db import Base
-import uuid
 
 
 class Restaurant(Base):
