@@ -196,7 +196,7 @@ COPY public.restaurants (id, nombre, slug, descripcion, logo, telefono, direccio
 --
 
 COPY public.users (id, nombre_completo, usuario, password, rol, activo, email) FROM stdin;
-1	Juan Pérez	admin	$2b$12$AmVlWQ1O2TeQvps8nJ8mRO83uag0s2o9jujH6802rQWvDxftRJQBK	admin	t	f.ramirez@uniandes.edu.co
+1	Juan Pérez	admin	$2b$12$1RSsFoppH0X4L3HL8iS4tOSXEM78C5PQ/6677yaJDnnMVyZlgrdD6	admin	t	f.ramirez@uniandes.edu.co
 \.
 
 
