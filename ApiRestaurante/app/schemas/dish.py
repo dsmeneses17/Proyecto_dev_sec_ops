@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
+from pydantic import field_validator
 from typing import Optional, List
 from typing_extensions import Annotated
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
+
 
 class DishBase(BaseModel):
     nombre: str = Field(..., max_length=100)
@@ -16,6 +18,27 @@ class DishBase(BaseModel):
     posicion: Optional[int] = None
     imagen_url: Optional[str] = None
     categoria_id: UUID
+
+    @field_validator("etiquetas")
+    @classmethod
+    def validate_etiquetas(cls, value: Optional[List[str]]):
+        if value is None:
+            return value
+
+        normalized: list[str] = []
+        for item in value:
+            tag = (item or "").strip().lower()
+            if not tag:
+                continue
+            if len(tag) > 30:
+                raise ValueError(f"Etiqueta demasiado larga: {item}")
+            normalized.append(tag)
+
+        unique_tags = list(dict.fromkeys(normalized))
+        if len(unique_tags) > 10:
+            raise ValueError("Máximo 10 etiquetas por plato")
+
+        return unique_tags
 
 class DishCreate(DishBase):
     pass

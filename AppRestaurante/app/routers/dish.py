@@ -1,6 +1,6 @@
 # app/routers/dish.py
 from fastapi import APIRouter, Request, HTTPException, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
@@ -20,7 +20,6 @@ from app.services.storage import build_display_url
 
 router = APIRouter(tags=["platos"])
 
-
 def _safe_cookie_value(value: str | None):
     if value in [None, "", "None", "null"]:
         return None
@@ -37,6 +36,34 @@ def _sign_dish_images(categorias):
             if isinstance(plato, dict) and plato.get("imagen_url"):
                 plato["imagen_url"] = build_display_url(plato["imagen_url"])
     return categorias
+
+
+def _parse_tags(checkbox_tags: Optional[list[str]], manual_tags: Optional[str]) -> list[str]:
+    candidates: list[str] = []
+
+    if checkbox_tags:
+        candidates.extend(checkbox_tags)
+
+    if manual_tags:
+        candidates.append(manual_tags)
+
+    if not candidates:
+        return []
+
+    parsed: list[str] = []
+    for item in candidates:
+        parts = str(item).split(",")
+        for part in parts:
+            normalized = part.strip().lower()
+            if not normalized:
+                continue
+            parsed.append(normalized)
+
+    unique_tags = list(dict.fromkeys(parsed))
+    if len(unique_tags) > 10:
+        raise HTTPException(status_code=400, detail="Máximo 10 etiquetas por plato")
+
+    return unique_tags
 
 
 @router.get("", response_class=HTMLResponse)
@@ -109,7 +136,8 @@ def crear(
     categoria_id: str = Form(...),
     disponible: Optional[bool] = Form(True),
     destacado: Optional[bool] = Form(False),
-    etiquetas: Optional[str] = Form(None),
+    etiquetas: Optional[list[str]] = Form(None),
+    etiquetas_manual: Optional[str] = Form(None),
     posicion: Optional[int] = Form(None),
     plato_id: Optional[str] = Form(None)
 ):
@@ -148,7 +176,7 @@ def crear(
         "categoria_id": categoria_id,
         "disponible": disponible,
         "destacado": destacado,
-        "etiquetas": [e.strip() for e in etiquetas.split(",")] if etiquetas else [],
+        "etiquetas": _parse_tags(etiquetas, etiquetas_manual),
         "posicion": posicion,
         "restaurante_id": restaurante_id
     }
@@ -157,6 +185,9 @@ def crear(
         resultado = update_dish(token, plato_id, payload)
     else:
         resultado = create_dish(token, payload)
+
+    if "error" not in resultado:
+        return RedirectResponse(url="/platos", status_code=303)
 
     categorias = _sign_dish_images(list_dishes(token))
 
@@ -183,6 +214,9 @@ def eliminar(request: Request, dish_id: str):
         raise HTTPException(status_code=401, detail="Token requerido")
 
     resultado = delete_dish(token, dish_id)
+    if "error" not in resultado:
+        return RedirectResponse(url="/platos", status_code=303)
+
     categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(
@@ -208,6 +242,9 @@ def toggle(request: Request, dish_id: str):
         raise HTTPException(status_code=401, detail="Token requerido")
 
     resultado = toggle_availability(token, dish_id)
+    if "error" not in resultado:
+        return RedirectResponse(url="/platos", status_code=303)
+
     categorias = _sign_dish_images(list_dishes(token))
 
     return templates.TemplateResponse(

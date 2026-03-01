@@ -637,7 +637,42 @@
 
         <div class="modal-field modal-span-2">
           <label for="etiquetas">Etiquetas</label>
-          <input type="text" name="etiquetas" id="etiquetas">
+          <div id="etiquetas" class="modal-checks">
+            <label class="modal-check" for="tag_nuevo">
+              <input type="checkbox" name="etiquetas" id="tag_nuevo" value="nuevo">
+              Nuevo
+            </label>
+            <label class="modal-check" for="tag_popular">
+              <input type="checkbox" name="etiquetas" id="tag_popular" value="popular">
+              Popular
+            </label>
+            <label class="modal-check" for="tag_recomendado">
+              <input type="checkbox" name="etiquetas" id="tag_recomendado" value="recomendado">
+              Recomendado
+            </label>
+            <label class="modal-check" for="tag_picante">
+              <input type="checkbox" name="etiquetas" id="tag_picante" value="picante">
+              Picante
+            </label>
+            <label class="modal-check" for="tag_vegano">
+              <input type="checkbox" name="etiquetas" id="tag_vegano" value="vegano">
+              Vegano
+            </label>
+            <label class="modal-check" for="tag_vegetariano">
+              <input type="checkbox" name="etiquetas" id="tag_vegetariano" value="vegetariano">
+              Vegetariano
+            </label>
+            <label class="modal-check" for="tag_sin_gluten">
+              <input type="checkbox" name="etiquetas" id="tag_sin_gluten" value="sin_gluten">
+              Sin gluten
+            </label>
+            <label class="modal-check" for="tag_sin_lactosa">
+              <input type="checkbox" name="etiquetas" id="tag_sin_lactosa" value="sin_lactosa">
+              Sin lactosa
+            </label>
+          </div>
+          <label for="etiquetas_manual" style="margin-top: .6rem;">Etiquetas manuales (separadas por coma)</label>
+          <input type="text" name="etiquetas_manual" id="etiquetas_manual" placeholder="ej: de_la_casa, temporada">
         </div>
 
         <div class="form-actions">
@@ -666,7 +701,9 @@
       const categoria_id = document.getElementById("categoria_id");
       const disponible = document.getElementById("disponible");
       const destacado = document.getElementById("destacado");
-      const etiquetas = document.getElementById("etiquetas");
+      const etiquetasChecks = document.querySelectorAll("input[name='etiquetas']");
+      const etiquetasManual = document.getElementById("etiquetas_manual");
+      const etiquetasPredefinidas = new Set(Array.from(etiquetasChecks).map(cb => cb.value.toLowerCase()));
       const posicion = document.getElementById("posicion");
       const imagenFile = document.getElementById("imagenFile");
       const imagenUrl = document.getElementById("imagen_url");
@@ -707,6 +744,8 @@
           cargarCategorias();
           modalTitle.textContent = "Crear Plato";
           form.reset(); // limpia los campos
+          etiquetasChecks.forEach(cb => cb.checked = false);
+          etiquetasManual.value = "";
           plato_id.value = "";
           imagenUrl.value = "";
           imagenUploadStatus.innerText = "";
@@ -731,7 +770,20 @@
           categoria_id.value = btn.dataset.categoria;
           disponible.checked = btn.dataset.disponible === "True" || btn.dataset.disponible === "true";
           destacado.checked = btn.dataset.destacado === "True" || btn.dataset.destacado === "true";
-          etiquetas.value = btn.dataset.etiquetas || "";
+          const rawTags = (btn.dataset.etiquetas || "")
+            .split(",")
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
+          const manualTags = [];
+          etiquetasChecks.forEach(cb => {
+            cb.checked = rawTags.includes(cb.value.toLowerCase());
+          });
+          rawTags.forEach(tag => {
+            if (!etiquetasPredefinidas.has(tag)) {
+              manualTags.push(tag);
+            }
+          });
+          etiquetasManual.value = manualTags.join(", ");
           posicion.value = btn.dataset.posicion || "";
 
           modal.style.display = "block";
