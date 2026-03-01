@@ -162,10 +162,20 @@ def make_dish(db_session):
 
 
 @pytest.fixture(autouse=True)
-def _clean_db(engine):
+def _clean_db(request):
+    """Truncate DB tables after each test that actually uses the database.
+
+    Tests that only rely on mocks (no ``db_session`` or ``client`` fixture)
+    can add the ``@pytest.mark.no_db`` marker to skip the cleanup (and
+    avoid requiring a live database connection altogether).
+    """
+    if "no_db" in {m.name for m in request.node.iter_markers()}:
+        yield
+        return
+    eng = request.getfixturevalue("engine")
     yield
     # Keep tests isolated (FK-safe via CASCADE)
-    with engine.begin() as conn:
+    with eng.begin() as conn:
         conn.execute(
             text(
                 "\n".join(
