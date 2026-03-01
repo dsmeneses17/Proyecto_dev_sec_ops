@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from app.ui.templates import templates
 from fastapi.responses import HTMLResponse
@@ -116,6 +116,18 @@ def generar_qr(request: Request, slug: str):
     png_bytes = _generate_qr_png_bytes(url_publica, fill_color=qr_color_fg, back_color=qr_color_bg)
     img_str = base64.b64encode(png_bytes).decode()
 
+    # Check if user is owner of this restaurant
+    token = request.cookies.get("access_token")
+    is_owner = False
+    if token:
+        try:
+            from app.core.security import decode_token
+            payload = decode_token(token)
+            if payload and "restaurant_id" in payload:
+                is_owner = str(menu.restaurant.id) == str(payload["restaurant_id"])
+        except:
+            pass
+
     return templates.TemplateResponse(
         "public/qr.html",
         {
@@ -125,6 +137,9 @@ def generar_qr(request: Request, slug: str):
             "url_publica": url_publica,
             "qr_png_download_url": f"/menu/{slug}/qr.png",
             "qr_svg_download_url": f"/menu/{slug}/qr.svg",
+            "qr_color_fg": qr_color_fg,
+            "qr_color_bg": qr_color_bg,
+            "is_owner": is_owner,
         }
     )
 
@@ -164,3 +179,63 @@ def exportar_qr_svg(request: Request, slug: str):
         media_type="image/svg+xml",
         headers={"Content-Disposition": f'attachment; filename="menu-{safe_slug}-qr.svg"'},
     )
+
+
+@router.post("/menu/{slug}/update-qr-colors")
+async def update_qr_colors(request: Request, slug: str):
+    """
+    Update QR colors for a restaurant
+    Only restaurant owners can update their QR colors
+    """
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Token requerido")
+
+    # Verify ownership
+    try:
+        from app.core.security import decode_token
+        payload = decode_token(token)
+        if not payload or "restaurant_id" not in payload:
+            raise HTTPException(status_code=403, detail="No autorizado")
+    except:
+        raise HTTPException(status_code=403, detail="Token inválido")
+
+    # Get menu and verify restaurant
+    menu = get_public_menu(slug)
+    if not menu:
+        raise HTTPException(status_code=404, detail="Restaurante no encontrado")
+
+    if str(menu.restaurant.id) != str(payload["restaurant_id"]):
+        raise HTTPException(status_code=403, detail="No eres propietario de este restaurante")
+
+    # Parse JSON body
+    try:
+        body = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+
+    # Validate colors format (hex #RRGGBB)
+    import re
+    hex_pattern = r"^#[0-9A-Fa-f]{6}$"
+    
+    qr_color_fg = body.get("qr_color_fg", "#000000")
+    qr_color_bg = body.get("qr_color_bg", "#FFFFFF")
+
+    if not re.match(hex_pattern, qr_color_fg):
+        raise HTTPException(status_code=400, detail="Color QR inválido")
+    if not re.match(hex_pattern, qr_color_bg):
+        raise HTTPException(status_code=400, detail="Color fondo inválido")
+
+    # Update restaurant colors via API
+    try:
+        from app.services.restaurant_service import update_restaurant_colors
+        result = update_restaurant_colors(token, menu.restaurant.id, qr_color_fg, qr_color_bg)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result.get("detalle", "Error al actualizar colores"))
+
+        return {"success": True, "message": "Colores actualizados correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

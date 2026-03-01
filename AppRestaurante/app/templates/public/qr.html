@@ -4,6 +4,46 @@
     <meta charset="UTF-8">
     <title>QR Menú</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .color-picker-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .color-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-input-wrapper input[type="color"] {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .color-input-wrapper label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+        }
+        .color-value {
+            font-size: 12px;
+            color: #999;
+            font-family: monospace;
+            min-width: 70px;
+        }
+        .alert-custom {
+            display: none;
+            margin-top: 15px;
+        }
+        .qr-preview {
+            transition: all 0.3s ease;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -11,11 +51,45 @@
 
     <h3 class="mb-4">Código QR del Menú</h3>
 
-    <img src="data:image/png;base64,{{ qr_base64 }}"
-         class="img-fluid mb-4"
+    <img id="qrPreview"
+         src="data:image/png;base64,{{ qr_base64 }}"
+         class="img-fluid mb-4 qr-preview"
          style="max-width: 300px;">
 
     <p class="text-muted">{{ url_publica }}</p>
+
+    <!-- Color customization - only for owners/admins -->
+    {% if is_owner %}
+    <div class="bg-white p-4 rounded mb-4" style="max-width: 500px; margin: 0 auto;">
+        <h5 class="mb-3">🎨 Personalizar Colores del QR</h5>
+        
+        <div class="color-picker-group">
+            <div class="color-input-wrapper">
+                <label for="qrColorFg">Color QR (frente)</label>
+                <input type="color" 
+                       id="qrColorFg" 
+                       value="{{ qr_color_fg }}"
+                       title="Selecciona el color del código QR">
+                <span class="color-value" id="qrColorFgValue">{{ qr_color_fg }}</span>
+            </div>
+            
+            <div class="color-input-wrapper">
+                <label for="qrColorBg">Color fondo</label>
+                <input type="color" 
+                       id="qrColorBg" 
+                       value="{{ qr_color_bg }}"
+                       title="Selecciona el color de fondo">
+                <span class="color-value" id="qrColorBgValue">{{ qr_color_bg }}</span>
+            </div>
+        </div>
+
+        <button id="btnSaveColors" class="btn btn-success btn-sm">
+            ✓ Guardar Colores
+        </button>
+
+        <div id="alertMessage" class="alert alert-custom mt-3" role="alert"></div>
+    </div>
+    {% endif %}
 
     <div class="d-flex gap-2 justify-content-center flex-wrap">
       <a href="{{ qr_png_download_url }}" class="btn btn-primary">
@@ -27,6 +101,74 @@
     </div>
 
 </div>
+
+<script>
+    {% if is_owner %}
+    const qrColorFgInput = document.getElementById('qrColorFg');
+    const qrColorBgInput = document.getElementById('qrColorBg');
+    const qrColorFgValue = document.getElementById('qrColorFgValue');
+    const qrColorBgValue = document.getElementById('qrColorBgValue');
+    const btnSaveColors = document.getElementById('btnSaveColors');
+    const alertMessage = document.getElementById('alertMessage');
+    const qrPreview = document.getElementById('qrPreview');
+    const slug = '{{ slug }}';
+
+    // Update hex value display
+    qrColorFgInput.addEventListener('change', () => {
+        qrColorFgValue.textContent = qrColorFgInput.value.toUpperCase();
+    });
+
+    qrColorBgInput.addEventListener('change', () => {
+        qrColorBgValue.textContent = qrColorBgInput.value.toUpperCase();
+    });
+
+    // Save colors
+    btnSaveColors.addEventListener('click', async () => {
+        const colorFg = qrColorFgInput.value;
+        const colorBg = qrColorBgInput.value;
+
+        try {
+            btnSaveColors.disabled = true;
+            btnSaveColors.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+
+            const response = await fetch(`/menu/${slug}/update-qr-colors`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    qr_color_fg: colorFg,
+                    qr_color_bg: colorBg
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alertMessage.className = 'alert alert-success alert-custom';
+                alertMessage.textContent = '✓ Colores guardados correctamente';
+                alertMessage.style.display = 'block';
+
+                // Refresh QR preview
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alertMessage.className = 'alert alert-danger alert-custom';
+                alertMessage.textContent = `✗ Error: ${data.detail || 'No se pudieron guardar los colores'}`;
+                alertMessage.style.display = 'block';
+            }
+        } catch (error) {
+            alertMessage.className = 'alert alert-danger alert-custom';
+            alertMessage.textContent = `✗ Error: ${error.message}`;
+            alertMessage.style.display = 'block';
+        } finally {
+            btnSaveColors.disabled = false;
+            btnSaveColors.innerHTML = '✓ Guardar Colores';
+        }
+    });
+    {% endif %}
+</script>
 
 </body>
 </html>

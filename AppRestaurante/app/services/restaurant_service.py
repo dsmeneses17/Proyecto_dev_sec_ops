@@ -121,5 +121,38 @@ def delete_restaurant(token: str, restaurant_id: str):
         return {"error": True, "detalle": "No se pudo eliminar el restaurante"}
 
 
+
 def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
     return create_or_update_restaurant(data, token)
+
+
+def update_restaurant_colors(token: str, restaurant_id: str, qr_color_fg: str, qr_color_bg: str):
+    """
+    Update QR colors for a restaurant
+    """
+    try:
+        payload = {
+            "qr_color_fg": qr_color_fg,
+            "qr_color_bg": qr_color_bg,
+        }
+        
+        response = requests.patch(
+            f"{BACKEND_URL}/{restaurant_id}",
+            headers=_build_headers(token),
+            json=payload,
+            timeout=10,
+        )
+
+        if response.status_code in [200, 201]:
+            return {"success": True, "data": response.json()}
+        else:
+            return {
+                "error": True,
+                "detalle": response.json().get("detail", "Error al actualizar colores"),
+            }
+    except requests.exceptions.Timeout:
+        logging.error("Timeout al actualizar colores del restaurante")
+        return {"error": True, "detalle": "Timeout en la solicitud"}
+    except requests.exceptions.RequestException as e:
+        logging.error("Error actualizando colores del restaurante: %s", e)
+        return {"error": True, "detalle": "No se pudieron actualizar los colores"}
