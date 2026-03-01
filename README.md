@@ -102,6 +102,16 @@ Variables obligatorias para Object Storage (S3-compatible) consumidas por `AppRe
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 
+Variables de worker pool para procesamiento concurrente de imágenes en `AppRestaurante`:
+
+- `IMAGE_WORKERS` (default `2`)
+- `IMAGE_QUEUE_MAXSIZE` (default `100`)
+- `IMAGE_QUEUE_PUT_TIMEOUT_SEC` (default `2.0`)
+- `IMAGE_SHUTDOWN_TIMEOUT_SEC` (default `30`)
+- `IMAGE_MAX_FILE_MB` (default `5`)
+- `IMAGE_ALLOWED_CONTENT_TYPES` (default `image/jpeg,image/png,image/webp`)
+- `IMAGE_ALLOWED_TARGETS` (default `logo,dish,general`)
+
 Puedes definirlas en un archivo `.env` en la raíz (junto a `docker-compose.yml`).
 
 Ejemplo:
@@ -119,7 +129,17 @@ S3_PUBLIC_BASE_URL=
 S3_FORCE_PATH_STYLE=false
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
+
+IMAGE_WORKERS=2
+IMAGE_QUEUE_MAXSIZE=100
+IMAGE_QUEUE_PUT_TIMEOUT_SEC=2.0
+IMAGE_SHUTDOWN_TIMEOUT_SEC=30
+IMAGE_MAX_FILE_MB=5
+IMAGE_ALLOWED_CONTENT_TYPES=image/jpeg,image/png,image/webp
+IMAGE_ALLOWED_TARGETS=logo,dish,general
 ```
+
+Nota operativa para MVP: al usar cola en memoria, ejecutar `AppRestaurante` con un solo proceso de aplicación (por ejemplo, `uvicorn` sin `--workers` o `--workers 1`) para mantener una única cola compartida.
 ---
 
 ## Pruebas

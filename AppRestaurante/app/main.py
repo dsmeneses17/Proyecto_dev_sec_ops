@@ -1,3 +1,7 @@
+import asyncio
+from contextlib import asynccontextmanager
+import signal
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -15,8 +19,66 @@ from app.routers import auth, restaurant, category, dish, upload
 
 
 from app.core.security import decode_token
+from app.services.image_worker_pool import ImageProcessingConfig, ImageWorkerPool
 
-app = FastAPI()
+
+def _register_shutdown_signal_handlers(shutdown_event: asyncio.Event):
+    loop = asyncio.get_running_loop()
+    signals = [signal.SIGTERM, signal.SIGINT]
+    previous_handlers: dict[int, signal.Handlers] = {}
+
+    def _handle_signal(signum: int):
+        if not shutdown_event.is_set():
+            loop.call_soon_threadsafe(shutdown_event.set)
+
+    for current_signal in signals:
+        try:
+            loop.add_signal_handler(current_signal, _handle_signal, current_signal)
+        except NotImplementedError:
+            previous_handlers[current_signal] = signal.getsignal(current_signal)
+            signal.signal(current_signal, lambda signum, frame: _handle_signal(signum))
+
+    def _cleanup_handlers():
+        for current_signal, previous_handler in previous_handlers.items():
+            signal.signal(current_signal, previous_handler)
+
+    return _cleanup_handlers
+
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    shutdown_event = asyncio.Event()
+    cleanup_signal_handlers = _register_shutdown_signal_handlers(shutdown_event)
+
+    image_pool = ImageWorkerPool(
+        ImageProcessingConfig(
+            workers=settings.IMAGE_WORKERS,
+            queue_maxsize=settings.IMAGE_QUEUE_MAXSIZE,
+            queue_put_timeout_sec=settings.IMAGE_QUEUE_PUT_TIMEOUT_SEC,
+            shutdown_timeout_sec=settings.IMAGE_SHUTDOWN_TIMEOUT_SEC,
+            max_image_size_bytes=settings.IMAGE_MAX_FILE_BYTES,
+            allowed_image_types=settings.IMAGE_ALLOWED_CONTENT_TYPES,
+            allowed_targets=settings.IMAGE_ALLOWED_TARGETS,
+            variants={
+                "thumbnail": (240, 240),
+                "medium": (800, 800),
+                "large": (1400, 1400),
+            },
+        )
+    )
+    await image_pool.start()
+
+    app_instance.state.image_worker_pool = image_pool
+    app_instance.state.shutdown_event = shutdown_event
+
+    try:
+        yield
+    finally:
+        cleanup_signal_handlers()
+        await image_pool.shutdown()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 
