@@ -21,7 +21,7 @@ def submit_register(
     usuario: str = Form(...),
     password: str = Form(...),
     restaurant_nombre: str = Form(...),
-    restaurant_slug: str = Form(...),
+    restaurant_slug: str | None = Form(None),
     restaurant_telefono: str | None = Form(None),
     restaurant_direccion: str | None = Form(None),
 ):
@@ -31,10 +31,12 @@ def submit_register(
         "usuario": usuario,
         "password": password,
         "restaurant_nombre": restaurant_nombre,
-        "restaurant_slug": restaurant_slug,
         "restaurant_telefono": restaurant_telefono,
         "restaurant_direccion": restaurant_direccion,
     }
+    # Only include slug if the user explicitly provided one
+    if restaurant_slug and restaurant_slug.strip():
+        payload["restaurant_slug"] = restaurant_slug.strip()
 
     result = register_owner_with_restaurant(payload)
     if "error" in result:

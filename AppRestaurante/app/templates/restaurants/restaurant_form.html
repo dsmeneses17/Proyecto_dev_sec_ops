@@ -11,8 +11,8 @@
   <label for="nombre">Nombre:</label>
   <input type="text" id="nombre" name="nombre" required value="{{ restaurant.nombre if restaurant else '' }}">
 
-  <label for="slug">Slug (URL amigable):</label>
-  <input readonly type="text" id="slug" name="slug" required value="{{ restaurant.slug if restaurant else '' }}">
+  <label for="slug">Slug (URL amigable) — generado automáticamente:</label>
+  <input readonly type="text" id="slug" name="slug" value="{{ restaurant.slug if restaurant else '' }}" placeholder="se genera del nombre">
 
   <label for="logoFile">Logo (JPEG, PNG o WebP - máx. 5MB):</label>
   <input type="file" id="logoFile" accept="image/jpeg,image/png,image/webp">

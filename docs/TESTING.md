@@ -38,23 +38,26 @@ El proyecto implementa una estrategia de pruebas en **tres niveles** (pirámide 
          ┌──────────────┐
          │   E2E (7)    │  ← Playwright (navegador real)
          ├──────────────┤
-         │Contrato (14) │  ← FastAPI TestClient (in-process)
+         │Contrato (18) │  ← FastAPI TestClient (in-process)
          ├──────────────┤
          │  Repos (9)   │  ← Postgres real vía SQLAlchemy
          ├──────────────┤
-         │Servicios (27)│  ← Mocks puros (unittest.mock)
+         │Utilidades(14)│  ← Pruebas puras (sin BD)
+         ├──────────────┤
+         │Servicios (28)│  ← Mocks puros (unittest.mock)
          └──────────────┘
               Base
 ```
 
 | Nivel | Framework | BD necesaria | Velocidad | Cantidad |
 |---|---|---|---|---|
-| Unitario — Servicios (ApiRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 10 tests |
+| Unitario — Servicios (ApiRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 11 tests |
+| Unitario — Utilidades (ApiRestaurante) | pytest | ❌ No | ⚡ Muy rápida | 14 tests |
 | Unitario — Servicios (AppRestaurante) | pytest + `monkeypatch` | ❌ No | ⚡ Muy rápida | 17 tests |
 | Repositorios | pytest + SQLAlchemy | ✅ Postgres | 🔄 Media | 9 tests |
-| Contrato API | pytest + FastAPI `TestClient` | ✅ Postgres | 🔄 Media | 14 tests |
+| Contrato API | pytest + FastAPI `TestClient` | ✅ Postgres | 🔄 Media | 18 tests |
 | E2E | Playwright (TypeScript) | ✅ Docker Compose completo | 🐢 Lenta | 7 tests |
-| **Total** | | | | **57 tests** |
+| **Total** | | | | **76 tests** |
 
 ---
 
@@ -69,12 +72,14 @@ Restaurante/
 │       ├── test_services_category_service.py  # Unitarios — servicio de categorías
 │       ├── test_services_menu_service.py      # Unitarios — servicio de menú público
 │       ├── test_services_restaurant_service.py# Unitarios — servicio de restaurantes
+│       ├── test_utils_slug.py                 # Unitarios — utilidad de slugs (RF06)
 │       ├── test_repositories_users.py         # Repositorio — usuarios (Postgres)
 │       ├── test_repositories_restaurants.py   # Repositorio — restaurantes (Postgres)
 │       ├── test_repositories_categories.py    # Repositorio — categorías (Postgres)
 │       ├── test_repositories_dishes.py        # Repositorio — platos (Postgres)
 │       ├── test_api_auth_login.py             # Contrato API — login
 │       ├── test_api_auth_register.py          # Contrato API — registro de usuarios (RF02)
+│       ├── test_api_slug_auto.py              # Contrato API — slug automático (RF06)
 │       └── test_api_contract_public_menu.py   # Contrato API — menú público
 │
 ├── AppRestaurante/
@@ -138,12 +143,43 @@ Estas pruebas validan la **lógica de negocio** de la capa de servicios, aislán
 | 1 | `test_get_public_menu_summary_raises_if_restaurant_missing` | Que al consultar un restaurante inexistente, se lanza `RestaurantNotFound` |
 | 2 | `test_get_public_menu_summary_counts_categories` | Que el resumen del menú incluye el conteo correcto de categorías |
 
-#### `test_services_restaurant_service.py` (2 tests)
+#### `test_services_restaurant_service.py` (3 tests)
 
 | # | Caso de Prueba | Qué valida |
 |---|---|---|
 | 1 | `test_create_restaurant_raises_when_slug_exists` | Que al crear un restaurante con slug duplicado, se lanza `RestaurantSlugAlreadyExists` |
 | 2 | `test_create_restaurant_returns_payload_when_slug_free` | Que cuando el slug es libre, se retorna el payload correcto con todos los campos |
+| 3 | `test_create_restaurant_auto_generates_slug_from_nombre` | Que cuando no se proporciona slug, se genera automáticamente a partir del nombre del restaurante usando `slugify_name()` (RF06) |
+
+---
+
+### 3.1b Pruebas Unitarias de Utilidades (ApiRestaurante)
+
+**Ubicación:** `ApiRestaurante/tests/test_utils_slug.py`  
+**Técnica:** Pruebas puras y mocks con `monkeypatch`  
+**BD requerida:** ❌ No  
+**Marcador:** `@pytest.mark.no_db`  
+
+Estas pruebas validan la **utilidad de generación de slugs** (RF06), que convierte nombres de restaurante en slugs URL-friendly y maneja colisiones de unicidad.
+
+#### `test_utils_slug.py` (14 tests)
+
+| # | Caso de Prueba | Qué valida |
+|---|---|---|
+| 1 | `test_slugify_name_basic` | Que un nombre simple se convierte a minúsculas con guiones: `"Mi Restaurante"` → `"mi-restaurante"` |
+| 2 | `test_slugify_name_special_chars` | Que caracteres especiales se eliminan: `"Café & Bar #1!"` → `"cafe-bar-1"` |
+| 3 | `test_slugify_name_accents` | Que acentos se transliteran: `"Señor José"` → `"senor-jose"` |
+| 4 | `test_slugify_name_leading_trailing` | Que espacios al inicio y final se eliminan: `"  spaces  "` → `"spaces"` |
+| 5 | `test_slugify_name_empty` | Que una cadena vacía retorna `""` |
+| 6 | `test_generate_unique_slug_no_collision` | Que sin colisión se retorna el slug base sin sufijo |
+| 7 | `test_generate_unique_slug_one_collision` | Que con una colisión se agrega sufijo `-2`: `"mi-rest"` → `"mi-rest-2"` |
+| 8 | `test_generate_unique_slug_multiple_collisions` | Que con múltiples colisiones se incrementa el sufijo: `-2`, `-3`, etc. |
+| 9 | `test_generate_unique_slug_explicit_slug_free` | Que un slug explícito se acepta si está libre |
+| 10 | `test_generate_unique_slug_explicit_slug_collision` | Que un slug explícito duplicado lanza `ValueError` |
+| 11 | `test_generate_unique_slug_explicit_matches_existing_is_ok` | Que al actualizar, el slug existente del mismo registro es aceptado |
+| 12 | `test_generate_unique_slug_explicit_taken_by_other_raises` | Que al actualizar, un slug tomado por otro registro lanza `ValueError` |
+| 13 | `test_generate_unique_slug_auto_skips_existing` | Que al regenerar, el slug existente del propio registro se excluye de la colisión |
+| 14 | `test_slugify_name_unicode_emoji` | Que emojis se eliminan correctamente |
 
 ---
 
@@ -217,6 +253,15 @@ Estas pruebas validan los **endpoints HTTP** de la API REST. Utilizan `TestClien
 | 6 | `test_register_short_password` | `/api/v1/auth/register` | POST | 422 | Contraseña menor a 6 caracteres falla la validación |
 | 7 | `test_register_short_username` | `/api/v1/auth/register` | POST | 422 | Usuario menor a 3 caracteres falla la validación |
 | 8 | `test_register_then_login` | `/api/v1/auth/register` + `/api/v1/auth/login` | POST | 200 | Flujo completo: registrar usuario y luego autenticarse exitosamente |
+
+#### `test_api_slug_auto.py` (4 tests) — RF06
+
+| # | Caso de Prueba | Endpoint | Método | Status esperado | Qué valida |
+|---|---|---|---|---|---|
+| 1 | `test_register_owner_auto_slug` | `/api/v1/auth/register-owner` | POST | 200 | Sin slug explícito, `restaurant_slug` se genera automáticamente a partir del nombre (`mi-restaurante` → `mi-restaurante`) |
+| 2 | `test_register_owner_explicit_slug` | `/api/v1/auth/register-owner` | POST | 200 | Con slug explícito, se usa el slug proporcionado por el usuario |
+| 3 | `test_register_owner_explicit_slug_collision` | `/api/v1/auth/register-owner` | POST | 400 | Slug explícito duplicado retorna 400 con `detail: "El slug ya está en uso"` |
+| 4 | `test_register_owner_auto_slug_collision_gets_suffix` | `/api/v1/auth/register-owner` | POST | 200 | Cuando el slug auto-generado ya existe, se agrega sufijo `-2` (unicidad automática) |
 
 #### `test_api_contract_public_menu.py` (3 tests)
 
@@ -536,6 +581,7 @@ npx playwright show-report
 | **Autenticación (login)** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_login` | ✅ `auth.spec.ts` |
 | **Registro de propietario** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_register` | ✅ `auth.spec.ts` |
 | **Registro de cliente (RF02)** | Backend API | ✅ `test_services_auth_service` | ✅ `test_api_auth_register` | — |
+| **Slug automático (RF06)** | Backend API | ✅ `test_utils_slug` + `test_services_restaurant_service` | ✅ `test_api_slug_auto` | — |
 | **Restaurantes (CRUD)** | Backend API | ✅ `test_services_restaurant_service` | ✅ `test_repositories_restaurants` | — |
 | **Categorías (CRUD)** | Backend API | ✅ `test_services_category_service` | ✅ `test_repositories_categories` | ✅ `crud.spec.ts` |
 | **Platos (CRUD)** | Backend API | — | ✅ `test_repositories_dishes` | ✅ `crud.spec.ts` |
@@ -551,7 +597,7 @@ npx playwright show-report
 
 ## 8. Resumen de Casos de Prueba
 
-### ApiRestaurante — Servicios (10 tests, sin BD)
+### ApiRestaurante — Servicios (11 tests, sin BD)
 
 | Archivo | Test | Resultado esperado |
 |---|---|---|
@@ -565,6 +611,26 @@ npx playwright show-report
 | `test_services_menu_service.py` | `test_get_public_menu_summary_counts_categories` | `categories_count == 3` |
 | `test_services_restaurant_service.py` | `test_create_restaurant_raises_when_slug_exists` | `RestaurantSlugAlreadyExists` |
 | `test_services_restaurant_service.py` | `test_create_restaurant_returns_payload_when_slug_free` | Payload con slug, admin_id, telefono |
+| `test_services_restaurant_service.py` | `test_create_restaurant_auto_generates_slug_from_nombre` | Slug auto-generado desde nombre (RF06) |
+
+### ApiRestaurante — Utilidades (14 tests, sin BD)
+
+| Archivo | Test | Resultado esperado |
+|---|---|---|
+| `test_utils_slug.py` | `test_slugify_name_basic` | `"mi-restaurante"` |
+| `test_utils_slug.py` | `test_slugify_name_special_chars` | `"cafe-bar-1"` |
+| `test_utils_slug.py` | `test_slugify_name_accents` | `"senor-jose"` |
+| `test_utils_slug.py` | `test_slugify_name_leading_trailing` | `"spaces"` |
+| `test_utils_slug.py` | `test_slugify_name_empty` | `""` |
+| `test_utils_slug.py` | `test_generate_unique_slug_no_collision` | Slug base sin sufijo |
+| `test_utils_slug.py` | `test_generate_unique_slug_one_collision` | Slug con sufijo `-2` |
+| `test_utils_slug.py` | `test_generate_unique_slug_multiple_collisions` | Incremento de sufijo `-2`, `-3` |
+| `test_utils_slug.py` | `test_generate_unique_slug_explicit_slug_free` | Slug explícito aceptado |
+| `test_utils_slug.py` | `test_generate_unique_slug_explicit_slug_collision` | `ValueError` por duplicado |
+| `test_utils_slug.py` | `test_generate_unique_slug_explicit_matches_existing_is_ok` | Slug propio aceptado |
+| `test_utils_slug.py` | `test_generate_unique_slug_explicit_taken_by_other_raises` | `ValueError` por conflicto |
+| `test_utils_slug.py` | `test_generate_unique_slug_auto_skips_existing` | Excluye slug propio de colisión |
+| `test_utils_slug.py` | `test_slugify_name_unicode_emoji` | Emojis eliminados |
 
 ### ApiRestaurante — Repositorios (9 tests, con Postgres)
 
@@ -580,7 +646,7 @@ npx playwright show-report
 | `test_repositories_dishes.py` | `test_dishes_create_and_list_by_category` | Platos ordenados por posición |
 | `test_repositories_dishes.py` | `test_dishes_get_by_id` | Plato recuperado por ID |
 
-### ApiRestaurante — Contrato API (14 tests, con Postgres)
+### ApiRestaurante — Contrato API (18 tests, con Postgres)
 
 | Archivo | Test | Endpoint | Status |
 |---|---|---|---|
@@ -595,6 +661,10 @@ npx playwright show-report
 | `test_api_auth_register.py` | `test_register_short_password` | `POST /api/v1/auth/register` | 422 |
 | `test_api_auth_register.py` | `test_register_short_username` | `POST /api/v1/auth/register` | 422 |
 | `test_api_auth_register.py` | `test_register_then_login` | `POST /api/v1/auth/register` + `login` | 200 |
+| `test_api_slug_auto.py` | `test_register_owner_auto_slug` | `POST /api/v1/auth/register-owner` | 200 |
+| `test_api_slug_auto.py` | `test_register_owner_explicit_slug` | `POST /api/v1/auth/register-owner` | 200 |
+| `test_api_slug_auto.py` | `test_register_owner_explicit_slug_collision` | `POST /api/v1/auth/register-owner` | 400 |
+| `test_api_slug_auto.py` | `test_register_owner_auto_slug_collision_gets_suffix` | `POST /api/v1/auth/register-owner` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_restaurants_contract` | `GET /api/v1/public/menu/restaurants` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_by_slug_contract` | `GET /api/v1/public/menu/{slug}` | 200 |
 | `test_api_contract_public_menu.py` | `test_public_menu_unknown_slug_is_404` | `GET /api/v1/public/menu/{slug}` | 404 |
@@ -639,14 +709,14 @@ npx playwright show-report
 
 > **Fecha:** 28 de febrero de 2026  
 > **Branch:** `main`  
-> **Resultado:** ✅ 57/57 tests pasaron
+> **Resultado:** ✅ 76/76 tests pasaron
 
 ### Job 1: ApiRestaurante — pytest
 
 ```
 Step: Run service unit tests (fast)
-..........                                                               [100%]
-10 passed
+...........                                                              [100%]
+11 passed
 
 PASSED tests/test_services_auth_service.py::test_register_user_raises_when_username_exists
 PASSED tests/test_services_auth_service.py::test_register_user_raises_when_email_exists
@@ -658,6 +728,28 @@ PASSED tests/test_services_menu_service.py::test_get_public_menu_summary_raises_
 PASSED tests/test_services_menu_service.py::test_get_public_menu_summary_counts_categories
 PASSED tests/test_services_restaurant_service.py::test_create_restaurant_raises_when_slug_exists
 PASSED tests/test_services_restaurant_service.py::test_create_restaurant_returns_payload_when_slug_free
+PASSED tests/test_services_restaurant_service.py::test_create_restaurant_auto_generates_slug_from_nombre
+```
+
+```
+Step: Run utility unit tests (fast, no DB)
+..............                                                           [100%]
+14 passed
+
+PASSED tests/test_utils_slug.py::test_slugify_name_basic
+PASSED tests/test_utils_slug.py::test_slugify_name_special_chars
+PASSED tests/test_utils_slug.py::test_slugify_name_accents
+PASSED tests/test_utils_slug.py::test_slugify_name_leading_trailing
+PASSED tests/test_utils_slug.py::test_slugify_name_empty
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_no_collision
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_one_collision
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_multiple_collisions
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_explicit_slug_free
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_explicit_slug_collision
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_explicit_matches_existing_is_ok
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_explicit_taken_by_other_raises
+PASSED tests/test_utils_slug.py::test_generate_unique_slug_auto_skips_existing
+PASSED tests/test_utils_slug.py::test_slugify_name_unicode_emoji
 ```
 
 ```
@@ -678,8 +770,8 @@ PASSED tests/test_repositories_users.py::test_users_get_by_email_not_found
 
 ```
 Step: Run API contract tests (in-process)
-..............                                                           [100%]
-14 passed
+..................                                                       [100%]
+18 passed
 
 PASSED tests/test_api_auth_login.py::test_auth_login_success_returns_token
 PASSED tests/test_api_auth_login.py::test_auth_login_unknown_user_is_404
@@ -692,6 +784,10 @@ PASSED tests/test_api_auth_register.py::test_register_invalid_email
 PASSED tests/test_api_auth_register.py::test_register_short_password
 PASSED tests/test_api_auth_register.py::test_register_short_username
 PASSED tests/test_api_auth_register.py::test_register_then_login
+PASSED tests/test_api_slug_auto.py::test_register_owner_auto_slug
+PASSED tests/test_api_slug_auto.py::test_register_owner_explicit_slug
+PASSED tests/test_api_slug_auto.py::test_register_owner_explicit_slug_collision
+PASSED tests/test_api_slug_auto.py::test_register_owner_auto_slug_collision_gets_suffix
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_restaurants_contract
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_by_slug_contract
 PASSED tests/test_api_contract_public_menu.py::test_public_menu_unknown_slug_is_404
@@ -742,4 +838,4 @@ Running 7 tests using 1 worker
 
 ---
 
-> **Total de casos de prueba: 57 tests** distribuidos en 4 niveles de la pirámide de testing (unitarios de servicios, repositorios, contrato API y E2E), ejecutados automáticamente en CI con cada push a `main` o pull request.
+> **Total de casos de prueba: 76 tests** distribuidos en 5 niveles de la pirámide de testing (unitarios de servicios, unitarios de utilidades, repositorios, contrato API y E2E), ejecutados automáticamente en CI con cada push a `main` o pull request.

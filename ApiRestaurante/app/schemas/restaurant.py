@@ -2,7 +2,6 @@ from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional, Dict
 from typing_extensions import Annotated
 from uuid import UUID
-from slugify import slugify
 
 class RestaurantBase(BaseModel):
     nombre: Annotated[str, Field(max_length=100)]
@@ -11,7 +10,7 @@ class RestaurantBase(BaseModel):
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     horarios: Optional[Dict] = None
-    slug: Annotated[str, Field(max_length=100)]
+    slug: Optional[Annotated[str, Field(max_length=100)]] = None
 
     
 

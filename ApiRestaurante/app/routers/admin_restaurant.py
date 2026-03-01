@@ -10,7 +10,7 @@ from app.schemas.restaurant import (
     RestaurantUpdate,
     RestaurantOut
 )
-
+from app.utils.slug import generate_unique_slug
 from app.core.security import get_current_user
 
 
@@ -88,6 +88,10 @@ def create_or_update_restaurant(
                 detail=f"Restaurante con id {data.id} no existe"
             )
 
+        # If slug is empty/None, keep the existing slug
+        if not data_dict.get("slug"):
+            data_dict["slug"] = restaurant.slug
+
         # Actualizar solo los campos enviados
         for field, value in data_dict.items():
             setattr(restaurant, field, value)
@@ -106,6 +110,10 @@ def create_or_update_restaurant(
             status_code=400,
             detail="Este usuario ya tiene un restaurante"
         )
+
+    # Auto-generate slug if not provided
+    if not data_dict.get("slug"):
+        data_dict["slug"] = generate_unique_slug(db, data.nombre)
 
     restaurant = Restaurant(
         **data_dict,

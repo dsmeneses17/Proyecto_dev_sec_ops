@@ -56,6 +56,9 @@ jobs:
       - name: Run service unit tests (fast)
         run: python -m pytest -q -rA --disable-warnings tests/test_services_*.py
 
+      - name: Run utility unit tests (fast, no DB)
+        run: python -m pytest -q -rA --disable-warnings tests/test_utils_*.py
+
       - name: Run repository tests (Postgres)
         run: python -m pytest -q -rA --disable-warnings tests/test_repositories_*.py
 

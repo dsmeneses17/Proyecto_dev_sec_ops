@@ -4,6 +4,7 @@ from app.core.security import create_access_token, get_current_user, create_acce
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
 from app.utils.security import hash_password, verify_password
+from app.utils.slug import generate_unique_slug
 from app.models.user import User
 from app.deps import get_db
 from app.schemas.user import UserCreate, UserLogin, Token
@@ -11,10 +12,6 @@ from app.core.security import  SECRET_KEY, ALGORITHM
 
 from jose import JWTError, jwt
 from app.models.restaurant import Restaurant
-
-
-def _slugify_like(value: str) -> str:
-    return (value or "").strip().lower()
 
 
 router = APIRouter()
@@ -112,7 +109,6 @@ def register_owner(payload: dict, db: Session = Depends(get_db)):
         "email",
         "password",
         "restaurant_nombre",
-        "restaurant_slug",
     ]
     missing = [k for k in required if not (payload.get(k) or "").strip()]
     if missing:
@@ -121,14 +117,19 @@ def register_owner(payload: dict, db: Session = Depends(get_db)):
     usuario = payload["usuario"].strip()
     email = payload["email"].strip()
     email_lc = email.lower()
-    restaurant_slug = _slugify_like(payload["restaurant_slug"])
+
+    # Auto-generate slug from restaurant name; honour an explicit slug if provided.
+    restaurant_nombre = payload["restaurant_nombre"].strip()
+    explicit_slug = (payload.get("restaurant_slug") or "").strip()
+    if explicit_slug:
+        restaurant_slug = generate_unique_slug(db, explicit_slug)
+    else:
+        restaurant_slug = generate_unique_slug(db, restaurant_nombre)
 
     if db.query(User).filter(User.usuario == usuario).first():
         raise HTTPException(status_code=400, detail="Usuario ya existe")
     if db.query(User).filter(User.email.ilike(email_lc)).first():
         raise HTTPException(status_code=400, detail="El email ya está registrado")
-    if db.query(Restaurant).filter(Restaurant.slug == restaurant_slug).first():
-        raise HTTPException(status_code=400, detail="Slug de restaurante ya existe")
 
     new_user = User(
         nombre_completo=payload["nombre_completo"].strip(),
@@ -142,7 +143,7 @@ def register_owner(payload: dict, db: Session = Depends(get_db)):
     db.flush()  # get user id
 
     new_restaurant = Restaurant(
-        nombre=payload["restaurant_nombre"].strip(),
+        nombre=restaurant_nombre,
         slug=restaurant_slug,
         telefono=(payload.get("restaurant_telefono") or None),
         direccion=(payload.get("restaurant_direccion") or None),

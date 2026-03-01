@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.repositories import restaurants as restaurants_repo
+from app.utils.slug import slugify, generate_unique_slug
 
 
 class RestaurantServiceError(Exception):
@@ -18,8 +19,8 @@ class RestaurantSlugAlreadyExists(RestaurantServiceError):
 @dataclass(frozen=True)
 class CreateRestaurantInput:
     nombre: str
-    slug: str
     admin_id: int
+    slug: str | None = None
     descripcion: str | None = None
     logo: str | None = None
     telefono: str | None = None
@@ -28,16 +29,19 @@ class CreateRestaurantInput:
 
 
 def create_restaurant(db: Session, data: CreateRestaurantInput):
-    existing = restaurants_repo.get_by_slug(db, data.slug)
-    if existing is not None:
-        raise RestaurantSlugAlreadyExists("Slug de restaurante ya existe")
+    # Auto-generate slug from nombre if not provided
+    if data.slug:
+        # If explicitly provided, verify uniqueness
+        existing = restaurants_repo.get_by_slug(db, data.slug)
+        if existing is not None:
+            raise RestaurantSlugAlreadyExists("Slug de restaurante ya existe")
+        final_slug = data.slug
+    else:
+        final_slug = generate_unique_slug(db, data.nombre)
 
-    # NOTE: repo level create() isn't implemented for restaurants in our minimal repo.
-    # To keep this service useful and testable without refactoring routers, we return
-    # a plain dict describing what would be created.
     return {
         "nombre": data.nombre,
-        "slug": data.slug,
+        "slug": final_slug,
         "admin_id": data.admin_id,
         "descripcion": data.descripcion,
         "logo": data.logo,
