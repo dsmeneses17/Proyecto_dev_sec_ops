@@ -4,6 +4,7 @@ from app.ui.templates import templates
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from app.services.menu_service import get_public_menu, list_public_restaurants
+from app.services.analytics_service import record_menu_view
 from pydantic import BaseModel
 
 import qrcode
@@ -94,6 +95,9 @@ def ver_menu(request: Request, slug: str):
             {"request": request}
         )
 
+    # RF22 – record this visualisation (fire-and-forget)
+    record_menu_view(slug, source="menu")
+
     return templates.TemplateResponse(
         "public/menu_public.html",
         {
@@ -112,6 +116,9 @@ def generar_qr(request: Request, slug: str):
             "public/menu_not_found.html",
             {"request": request}
         )
+
+    # RF22 – record QR-page visualisation
+    record_menu_view(slug, source="qr")
     
     url_publica = _build_public_menu_url(request, slug)
     

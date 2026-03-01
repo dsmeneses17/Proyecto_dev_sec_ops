@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.models.dish import Dish
+from app.models.menu_view import MenuView
 
 from app.utils.security import hash_password
 
@@ -180,6 +181,7 @@ def _clean_db(request):
             text(
                 "\n".join(
                     [
+                        'TRUNCATE TABLE menu_views RESTART IDENTITY CASCADE;',
                         'TRUNCATE TABLE dishes RESTART IDENTITY CASCADE;',
                         'TRUNCATE TABLE categories RESTART IDENTITY CASCADE;',
                         'TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;',

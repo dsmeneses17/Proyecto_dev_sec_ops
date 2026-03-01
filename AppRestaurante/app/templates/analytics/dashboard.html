@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics – Visualizaciones del Menú{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>📊 Analytics – Visualizaciones del Menú</h2>
+        <p class="text-muted">Registro de cada visualización pública de tu menú y código QR.</p>
+    </div>
+</div>
+
+{% if not stats %}
+<div class="alert alert-warning">
+    No se pudieron obtener las estadísticas. Asegúrate de tener un restaurante registrado.
+</div>
+{% else %}
+
+{# KPI cards #}
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-primary h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total</h5>
+                <p class="display-5 fw-bold mb-0" id="stat-total">{{ stats.total_views }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-success h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Hoy</h5>
+                <p class="display-5 fw-bold mb-0" id="stat-today">{{ stats.views_today }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-info h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Últimos 7 días</h5>
+                <p class="display-5 fw-bold mb-0" id="stat-7d">{{ stats.views_last_7_days }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-warning h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Últimos 30 días</h5>
+                <p class="display-5 fw-bold mb-0" id="stat-30d">{{ stats.views_last_30_days }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Chart #}
+<div class="card mb-4">
+    <div class="card-header">Visualizaciones diarias (últimos 30 días)</div>
+    <div class="card-body">
+        <canvas id="viewsChart" height="100"></canvas>
+    </div>
+</div>
+
+{# Daily breakdown table #}
+<div class="card">
+    <div class="card-header">Desglose diario</div>
+    <div class="card-body p-0">
+        <table class="table table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th class="text-end">Visualizaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in stats.daily_breakdown | reverse %}
+                <tr>
+                    <td>{{ day.date }}</td>
+                    <td class="text-end">{{ day.views }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="text-center text-muted py-3">Sin datos aún</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Chart.js CDN – lightweight bar chart #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+    const daily = {{ stats.daily_breakdown | tojson }};
+    const labels = daily.map(d => d.date);
+    const data = daily.map(d => d.views);
+
+    new Chart(document.getElementById('viewsChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Visualizaciones',
+                data,
+                backgroundColor: 'rgba(13,110,253,0.6)',
+                borderColor: 'rgba(13,110,253,1)',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+</script>
+
+{% endif %}
+{% endblock %}

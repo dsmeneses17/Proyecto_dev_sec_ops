@@ -16,6 +16,7 @@ from app.ui.templates import templates
 
 
 from app.routers import auth, restaurant, category, dish, upload
+from app.routers import analytics as analytics_router
 
 
 from app.core.security import decode_token
@@ -212,3 +213,4 @@ app.include_router(dish.router, prefix="/platos", tags=["platos"])
 app.include_router(upload.router, prefix="/uploads", tags=["uploads"])
 app.include_router(public_menu.router)
 app.include_router(register_owner.router)
+app.include_router(analytics_router.router)

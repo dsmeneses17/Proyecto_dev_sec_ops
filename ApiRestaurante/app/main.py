@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, admin_category, admin_dish, admin_restaurant, public_menu
+from app.routers import auth, admin_category, admin_dish, admin_restaurant, public_menu, analytics
 
 app = FastAPI()
 
@@ -11,6 +11,7 @@ app.include_router(admin_category.router, prefix="/api/v1/admin/categories")
 app.include_router(admin_dish.router, prefix="/api/v1/admin/dishes", tags=["dishes"])
 app.include_router(admin_restaurant.router, prefix="/api/v1/admin/restaurants")
 app.include_router(public_menu.router)
+app.include_router(analytics.router)
 
 # Debug: imprime todas las rutas registradas
 for route in app.routes:
