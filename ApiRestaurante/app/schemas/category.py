@@ -25,3 +25,9 @@ class CategoryOut(BaseModel):
 
     class Config:
         from_attributes = True  # Pydantic v2
+
+
+class CategoryReorder(BaseModel):
+    """Schema para reordenar categorías."""
+    categorias: list[dict]  # [{"id": "...", "posicion": 1}, ...]
+
