@@ -9,17 +9,16 @@
 | RNF-05 | Seguridad | Las contraseñas deben almacenarse con hash bcrypt | Verificación | ✅ | `ApiRestaurante/app/utils/security.py` – `hash_password()` usa `bcrypt.gensalt()` + `bcrypt.hashpw()`. `verify_password()` usa `bcrypt.checkpw()`. Todas las contraseñas en DB almacenadas como `$2b$12$...`. Tests: `test_services_auth_service.py` (4 tests), `test_repositories_users.py` (2 tests). |
 | RNF-06 | Mantenibilidad | El código debe seguir las guías de estilo de Python | ruff | ✅ | `pyproject.toml` – configuración ruff: reglas E, F, W, I, UP, B; target py311; line-length 120. CI job `ruff-lint` en `.github/workflows/api-tests.yml` ejecuta `ruff check` y `ruff format --check` en cada push. Commit `635e761`. |
 | RNF-07 | Mantenibilidad | Cobertura de tests unitarios mínima del 60% | pytest | ✅ | CI step `ApiRestaurante pytest` ejecuta `pytest --cov --cov-fail-under=60`. Cobertura actual: **74.27%** (90 tests). `AppRestaurante` también ejecuta pytest (sin umbral mínimo, 14% cobertura reportada). Commits `ac81d2f`, `8ca5d33`. |
-| RNF-08 | Portabilidad | La aplicación debe ejecutarse en contenedor Docker | Dockerfile | ✅ | `ApiRestaurante/Dockerfile` – Python 3.11-slim, uvicorn en puerto 5000. `AppRestaurante/Dockerfile` – Python 3.11-slim, uvicorn en puerto 8000. `docker-compose.yml` – 3 servicios: `postgres_db` (PostgreSQL 15), `backend_api`, `frontend_api`. Todo el stack levanta con `docker compose up`. |
+| RNF-08 | Portabilidad | La aplicación debe ejecutarse en contenedor Docker | Dockerfile | ✅ | `ApiRestaurante/Dockerfile` – Python 3.11-slim, uvicorn en puerto 5000. `AppRestaurante/Dockerfile` – Python 3.11-slim, uvicorn en puerto 8000. `infra/nginx/Dockerfile` – Nginx 1.27-alpine con TLS. `docker-compose.yml` – 4 servicios: `postgres_db` (PostgreSQL 15), `backend_api`, `frontend_api`, `secure_gateway` (Nginx TLS). Todo el stack levanta con `docker compose up`. |
 | RNF-09 | Usabilidad | El frontend debe ser responsive (mobile-first) | Lighthouse > 90 | ✅ | Bootstrap 5 responsive grid + meta viewport. Lighthouse scores ≥ 90 en Performance, Accessibility, Best Practices y SEO. `LighthouseHeadersMiddleware` agrega `Cache-Control` y `X-Content-Type-Options`. CI job `lighthouse-audit` con `lighthouserc.js`. Documentación: `docs/RNF-09_LIGHTHOUSE.md`. Commit `e95636d`. |
 
 ## Resumen
 
 - **Total requerimientos no funcionales**: 9
-- **Implementados completamente**: 8 / 9 (89%)
-- **Parcialmente implementados**: 1 / 9 (RNF-03 — HTTPS preparado, pendiente certificado en producción)
+- **Implementados completamente**: 9 / 9 (100%) ✅
 - **Cobertura por categoría**:
   - Disponibilidad (1): 1/1 ✅
-  - Seguridad (4): 3/4 ✅ + 1 ⚠️
+  - Seguridad (4): 4/4 ✅
   - Mantenibilidad (2): 2/2 ✅
   - Portabilidad (1): 1/1 ✅
   - Usabilidad (1): 1/1 ✅
@@ -28,13 +27,17 @@
 
 | Archivo | RNFs cubiertos |
 |---|---|
-| `AppRestaurante/app/main.py` | RNF-01, RNF-02, RNF-04, RNF-09 |
+| `AppRestaurante/app/main.py` | RNF-01, RNF-02, RNF-03, RNF-04, RNF-09 |
+| `ApiRestaurante/app/main.py` | RNF-04 |
 | `ApiRestaurante/app/utils/security.py` | RNF-05 |
 | `ApiRestaurante/app/deps.py` | RNF-02 |
+| `infra/nginx/nginx.conf` | RNF-03 |
+| `infra/nginx/entrypoint.sh` | RNF-03 |
+| `infra/nginx/Dockerfile` | RNF-03, RNF-08 |
 | `pyproject.toml` | RNF-06 |
 | `.github/workflows/api-tests.yml` | RNF-06, RNF-07, RNF-09 |
 | `lighthouserc.js` | RNF-09 |
-| `docker-compose.yml` | RNF-08 |
+| `docker-compose.yml` | RNF-03, RNF-08 |
 | `ApiRestaurante/Dockerfile` | RNF-08 |
 | `AppRestaurante/Dockerfile` | RNF-08 |
 | `docs/RNF-09_LIGHTHOUSE.md` | RNF-09 |
