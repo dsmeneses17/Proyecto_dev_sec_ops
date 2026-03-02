@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Menú digital de {{ menu.restaurant.nombre }}. Consulta nuestras categorías, platos, precios y ofertas." />
+    <meta name="description"
+        content="Menú digital de {{ menu.restaurant.nombre }}. Consulta nuestras categorías, platos, precios y ofertas." />
     <meta name="theme-color" content="#f8f9fa" />
     <title>{{ menu.restaurant.nombre }}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>" />
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>" />
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -105,33 +108,30 @@
 
 <body>
 
-<div class="container py-3">
+    <div class="container py-3">
 
-    <!-- Header -->
-    <div class="text-center mb-4">
-        {% if menu.restaurant.logo_url %}
-            <img src="{{ menu.restaurant.logo_url }}"
-                 alt="Logo de {{ menu.restaurant.nombre }}"
-                 class="logo mb-2"
-                 width="180" height="90">
-        {% endif %}
-        <h2 class="fw-bold">{{ menu.restaurant.nombre }}</h2>
-    </div>
+        <!-- Header -->
+        <div class="text-center mb-4">
+            {% if menu.restaurant.logo_url %}
+            <img src="{{ menu.restaurant.logo_url }}" alt="Logo de {{ menu.restaurant.nombre }}" class="logo mb-2"
+                width="180" height="90">
+            {% endif %}
+            <h2 class="fw-bold">{{ menu.restaurant.nombre }}</h2>
+        </div>
 
-    <!-- Category Navigation -->
-    <div class="category-nav mb-3">
-        <div class="nav nav-pills flex-nowrap overflow-auto">
-            {% for categoria in menu.categorias %}
-                <a href="#cat-{{ categoria.id }}"
-                   class="nav-link me-2">
+        <!-- Category Navigation -->
+        <div class="category-nav mb-3">
+            <div class="nav nav-pills flex-nowrap overflow-auto">
+                {% for categoria in menu.categorias %}
+                <a href="#cat-{{ categoria.id }}" class="nav-link me-2">
                     {{ categoria.nombre }}
                 </a>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
-    </div>
 
-    <!-- Dishes -->
-    {% for categoria in menu.categorias %}
+        <!-- Dishes -->
+        {% for categoria in menu.categorias %}
         <div id="cat-{{ categoria.id }}">
 
             <h4 class="category-title border-bottom pb-2">
@@ -139,70 +139,68 @@
             </h4>
 
             {% for plato in categoria.platos %}
-                <div class="card dish-card shadow-sm mb-3">
+            <div class="card dish-card shadow-sm mb-3">
 
-                    <div class="row g-0">
+                <div class="row g-0">
 
-                        {% if plato.imagen_url %}
-                        <div class="col-4">
-                            <img src="{{ plato.imagen_url }}"
-                                 alt="{{ plato.nombre }}"
-                                 class="dish-img w-100"
-                                 loading="lazy"
-                                 width="120" height="120">
-                        </div>
-                        {% endif %}
+                    {% if plato.imagen_url %}
+                    <div class="col-4">
+                        <img src="{{ plato.imagen_url }}" alt="{{ plato.nombre }}" class="dish-img w-100" loading="lazy"
+                            width="120" height="120">
+                    </div>
+                    {% endif %}
 
-                        <div class="col">
-                            <div class="card-body">
+                    <div class="col">
+                        <div class="card-body">
 
-                                <div class="dish-title">
-                                    {{ plato.nombre }}
+                            <div class="dish-title">
+                                {{ plato.nombre }}
 
-                                    {% if plato.destacado %}
-                                        <span class="badge badge-featured">
-                                            ⭐ Popular
-                                        </span>
-                                    {% endif %}
-                                </div>
-
-                                <div class="dish-desc mb-2">
-                                    {{ plato.descripcion }}
-                                </div>
-
-                                <div class="price">
-                                    {% if plato.precio_oferta %}
-                                        <span class="text-danger">
-                                            ${{ plato.precio_oferta }}
-                                        </span>
-                                        <span class="old-price">
-                                            ${{ plato.precio }}
-                                        </span>
-                                    {% else %}
-                                        ${{ plato.precio }}
-                                    {% endif %}
-                                </div>
-
-                                {% if plato.etiquetas %}
-                                    <div class="mt-2">
-                                        <span class="badge tag-badge">
-                                            {{ plato.etiquetas }}
-                                        </span>
-                                    </div>
+                                {% if plato.destacado %}
+                                <span class="badge badge-featured">
+                                    ⭐ Popular
+                                </span>
                                 {% endif %}
-
                             </div>
-                        </div>
 
+                            <div class="dish-desc mb-2">
+                                {{ plato.descripcion }}
+                            </div>
+
+                            <div class="price">
+                                {% if plato.precio_oferta %}
+                                <span class="text-danger">
+                                    ${{ plato.precio_oferta }}
+                                </span>
+                                <span class="old-price">
+                                    ${{ plato.precio }}
+                                </span>
+                                {% else %}
+                                ${{ plato.precio }}
+                                {% endif %}
+                            </div>
+
+                            {% if plato.etiquetas %}
+                            <div class="mt-2">
+                                <span class="badge tag-badge">
+                                    {{ plato.etiquetas }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                        </div>
                     </div>
 
                 </div>
+
+            </div>
             {% endfor %}
 
         </div>
-    {% endfor %}
+        {% endfor %}
 
-</div>
+    </div>
 
 </body>
+
 </html>

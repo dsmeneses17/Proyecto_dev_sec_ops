@@ -135,6 +135,7 @@ def test_stats_with_date_range_filters_breakdown(client, make_user, make_restaur
     rest = make_restaurant(admin_id=admin.id, slug="test-resto", nombre="Test Resto")
 
     now = datetime.now(UTC)
+    today_start = now.replace(hour=12, minute=0, second=0, microsecond=0)
 
     # Insert views at different dates: 2 old (15 days ago) + 3 recent (today)
     for i in range(2):
@@ -142,14 +143,14 @@ def test_stats_with_date_range_filters_breakdown(client, make_user, make_restaur
             restaurant_id=rest.id,
             slug="test-resto",
             source="menu",
-            viewed_at=now - timedelta(days=15, hours=i),
+            viewed_at=today_start - timedelta(days=15, minutes=i),
         ))
     for i in range(3):
         db_session.add(MenuView(
             restaurant_id=rest.id,
             slug="test-resto",
             source="qr",
-            viewed_at=now - timedelta(hours=i),
+            viewed_at=today_start + timedelta(minutes=i),
         ))
     db_session.commit()
 
