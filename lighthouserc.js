@@ -11,7 +11,7 @@ module.exports = {
       /* URLs are set by CI via the --url flag or the env var LHCI_URL.
        * Default to localhost:8000 (docker compose frontend). */
       url: [
-        process.env.LHCI_URL || 'http://localhost:8000/api/v1/auth/login',
+        process.env.LHCI_URL || 'https://localhost/api/v1/auth/login',
       ],
       numberOfRuns: 3,
       settings: {
@@ -20,6 +20,8 @@ module.exports = {
         onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
         /* Skip HTTPS-specific audits when testing localhost */
         skipAudits: ['is-on-https', 'redirects-http'],
+        /* Accept self-signed TLS certificate from nginx gateway */
+        chromeFlags: ['--ignore-certificate-errors'],
       },
     },
     assert: {

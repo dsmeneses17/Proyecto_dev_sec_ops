@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.services import auth_service
 from app.core.config import settings
+from app.services import auth_service
 from app.ui.templates import templates
 
 router = APIRouter()
