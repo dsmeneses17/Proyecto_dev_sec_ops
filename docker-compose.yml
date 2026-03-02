@@ -48,6 +48,8 @@ services:
     environment:
       TLS_CERT_CN: ${TLS_CERT_CN:-localhost}
       TLS_CERT_DAYS: ${TLS_CERT_DAYS:-365}
+    volumes:
+      - ./infra/certs:/etc/nginx/certs
     ports:
       - "80:80"
       - "443:443"

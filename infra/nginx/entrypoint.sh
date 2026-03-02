@@ -15,7 +15,8 @@ if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
     -days "$CERT_DAYS" \
     -keyout "$KEY_FILE" \
     -out "$CERT_FILE" \
-    -subj "/CN=$CERT_CN"
+    -subj "/CN=$CERT_CN" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1"
 fi
 
 exec nginx -g 'daemon off;'

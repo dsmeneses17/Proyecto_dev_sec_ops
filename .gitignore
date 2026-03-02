@@ -65,6 +65,8 @@ pnpm-debug.log*
 
 # ---- Project specific ----
 postgres_data/
+infra/certs/*.key
+infra/certs/*.crt
 
 # If you ever generate local build outputs
 dist/
