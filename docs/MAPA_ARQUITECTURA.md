@@ -1,50 +1,57 @@
-# Mapa de Arquitectura — Proyecto  Restaurante
+# Mapa de Arquitectura — Proyecto Restaurante
 
-## 1) Vista general
+## 1) Vista general completa
 
-El workspace contiene **dos aplicaciones FastAPI** y una base de datos PostgreSQL, orquestadas por Docker Compose:
+La solución está organizada como una arquitectura web + API desacoplada, desplegada en contenedores y protegida con HTTPS.
 
-- `ApiRestaurante`: API backend (lógica de negocio + acceso a base de datos).
-- `AppRestaurante`: aplicación web FastAPI (renderizado de templates + consumo de la API backend).
-- `postgres_db`: almacenamiento relacional principal.
+Componentes principales:
 
-Adicionalmente, `AppRestaurante` puede integrarse con **Object Storage compatible S3** para carga de imágenes.
+- `secure_gateway` (Nginx): punto de entrada único, termina TLS, redirige HTTP→HTTPS y enruta tráfico.
+- `frontend_api` (`AppRestaurante`): aplicación web FastAPI con renderizado de plantillas Jinja2.
+- `backend_api` (`ApiRestaurante`): API REST FastAPI con reglas de negocio y acceso a datos.
+- `postgres_db` (PostgreSQL): persistencia transaccional principal.
+- `S3/Object Storage` (integración): almacenamiento de imágenes de menú.
 
 ---
 
-## 2) Topología de despliegue (docker-compose)
+## 2) Topología de despliegue (actual)
 
 ```mermaid
-flowchart LR
-    U[Usuario / Navegador] --> FE[frontend_api\nAppRestaurante\n:8000]
-    FE --> BE[backend_api\nApiRestaurante\n:5000]
-    BE --> DB[(postgres_db\nPostgreSQL 15\n:5432)]
-    FE --> S3[(Object Storage S3\nbucket configurable)]
+flowchart TB
+    U[Usuario / Navegador] --> G[secure_gateway\nNginx TLS\n80→443 + HSTS]
+
+    subgraph Runtime Docker Compose
+        G --> FE[frontend_api\nAppRestaurante\nFastAPI + Jinja2]
+        G -->|/backend-api/*| BE[backend_api\nApiRestaurante\nFastAPI REST]
+
+        FE -->|HTTP interno| BE
+        BE --> DB[(postgres_db\nPostgreSQL 15)]
+        FE --> S3[(AWS S3 / Object Storage)]
+    end
 ```
 
-Servicios declarados en `docker-compose.yml`:
+### Puertos publicados al host
 
-- `postgres_db` expone `5432:5432`.
-- `backend_api` construye desde `./ApiRestaurante` y expone `5001:5000`.
-- `frontend_api` construye desde `./AppRestaurante` y expone `8000:8000`.
+- `80:80` y `443:443` en `secure_gateway`.
+- `5432:5432` en `postgres_db` (solo para operación/administración DB).
+- `backend_api` y `frontend_api` se exponen internamente en la red Docker (`5000`, `8000`) sin publicación directa al host.
 
 ---
 
-## 3) Arquitectura interna por aplicación
+## 3) Arquitectura interna por capas
 
-### 3.1 ApiRestaurante (Backend API)
+## 3.1 Backend (`ApiRestaurante`)
 
-Estructura por capas (estilo clean/layered):
+Arquitectura por capas:
 
-- **Routers** (`app/routers/`): endpoints HTTP (`auth`, `admin_*`, `public_menu`).
-- **Services** (`app/services/`): casos de uso y reglas de negocio.
-- **Repositories** (`app/repositories/`): acceso a datos vía SQLAlchemy.
-- **Models** (`app/models/`): entidades ORM.
-- **Schemas** (`app/schemas/`): contratos de entrada/salida (Pydantic).
-- **Core/Utils** (`app/core`, `app/utils`): seguridad, JWT, utilidades transversales.
-- **DB** (`app/db.py`): engine, sesión y base declarativa.
+- **Routers**: definen endpoints (`auth`, `admin_*`, `public_menu`).
+- **Services**: contienen reglas de negocio.
+- **Repositories**: encapsulan acceso a datos con SQLAlchemy.
+- **Models**: entidades ORM para PostgreSQL.
+- **Schemas**: contratos Pydantic de entrada/salida.
+- **Core/Utils**: JWT, seguridad, utilidades transversales, cache.
 
-Flujo típico:
+Flujo estándar:
 
 ```mermaid
 flowchart LR
@@ -52,184 +59,147 @@ flowchart LR
     S --> RP[Repository]
     RP --> M[Model ORM]
     M --> PG[(PostgreSQL)]
-    R --> SC[Schema Request/Response]
+    R --> SC[Schema Pydantic]
 ```
 
-### 3.2 AppRestaurante (Web + BFF ligero)
+## 3.2 Frontend web (`AppRestaurante`)
 
-Responsabilidades principales:
+Estructura de aplicación web con integración backend:
 
-- Renderizado HTML con Jinja2 (`app/templates/`).
-- Middleware JWT basado en cookie/token para proteger rutas.
-- Consumo de API backend mediante `settings.BACKEND_URL` (`http://backend_api:5000/api/v1/`).
-- Gestión opcional de archivos en S3 (`app/services/storage.py`).
-
-Capas principales:
-
-- **Routers web** (`app/routers/`): autenticación, restaurantes, categorías, platos, uploads, menú público.
-- **Services** (`app/services/`): lógica de UI y llamadas a backend/storage.
-- **Core** (`app/core/`): configuración y seguridad.
-- **UI/Templates** (`app/ui`, `app/templates`, `app/static`): presentación.
+- **Routers web**: navegación, formularios y acciones de usuario.
+- **Services**: integración con API backend y almacenamiento S3.
+- **Core**: configuración y seguridad.
+- **UI**: plantillas Jinja2, archivos estáticos, helpers de presentación.
+- **Middlewares**: protección por JWT/cookie y refuerzo HTTPS.
 
 ---
 
-## 4) Flujos clave del sistema
+## 4) Seguridad y controles transversales
 
-### 4.1 Autenticación
+La arquitectura incorpora controles de seguridad en varios niveles:
 
-1. Usuario accede a `frontend_api`.
-2. `AppRestaurante` valida token (header o cookie) en middleware.
-3. Si requiere login, se usa router de auth (`/api/v1/auth`) y se obtiene JWT.
-4. JWT habilita acceso a rutas protegidas y operaciones administrativas.
-
-### 4.2 Gestión administrativa (restaurantes/categorías/platos)
-
-1. UI en `AppRestaurante` recibe interacción del usuario.
-2. Frontend llama a endpoints del `ApiRestaurante`.
-3. Backend procesa por capas `router -> service -> repository -> PostgreSQL`.
-4. Respuesta vuelve al frontend para renderizado de templates.
-
-### 4.3 Menú público
-
-1. Usuario navega rutas públicas de menú.
-2. `AppRestaurante`/`ApiRestaurante` exponen datos sin requerir flujo administrativo completo.
-3. Si hay imágenes en S3, se usan URLs públicas o prefirmadas para visualización.
+- **Transporte seguro (RNF-03)**: TLS en `secure_gateway` con redirección HTTP→HTTPS.
+- **Headers de seguridad**: HSTS y cabeceras defensivas en gateway.
+- **Autenticación/Autorización**: JWT + validación de rutas administrativas.
+- **Cookies seguras**: `Secure`/`SameSite` en sesión web.
+- **Aislamiento de red**: backend/frontend no expuestos directamente al host.
 
 ---
 
-## 5) Mapa de módulos del workspace
+## 5) Datos y almacenamiento
+
+- **PostgreSQL**: almacena entidades de dominio (usuarios, restaurantes, categorías, platos).
+- **Object Storage (S3)**: almacena archivos binarios (imágenes), evitando sobrecargar la base relacional.
+- **Cache de menú**: mecanismo híbrido con memoria y soporte Redis opcional para optimizar lecturas públicas.
+
+---
+
+## 6) Calidad, pruebas y entrega continua
+
+La arquitectura técnica incluye validación automatizada:
+
+- **Pytest**:
+  - Unitarias de servicios.
+  - Repositorios.
+  - Contrato API.
+- **Playwright**: pruebas E2E del flujo web.
+- **GitHub Actions**: pipeline para ejecutar tests, cobertura y E2E en entorno controlado.
+
+```mermaid
+flowchart LR
+    T1[Pytest\nUnit/Repo/Contract] --> CI[GitHub Actions\napi-tests.yml]
+    T2[Playwright E2E] --> CI
+    CI --> DEP[Validación de build y despliegue]
+```
+
+---
+
+## 7) Flujos funcionales principales
+
+## 7.1 Login y sesión
+
+1. Usuario entra por `https://localhost`.
+2. Gateway termina TLS y enruta al frontend.
+3. Frontend valida credenciales vía backend.
+4. Backend emite token JWT.
+5. Frontend establece sesión y habilita rutas protegidas.
+
+## 7.2 Operación administrativa
+
+1. Usuario admin interactúa con formularios en frontend.
+2. Frontend consume endpoints administrativos del backend.
+3. Backend procesa `router → service → repository → PostgreSQL`.
+4. Frontend renderiza confirmaciones/errores según respuesta.
+
+## 7.3 Menú público
+
+1. Cliente consulta menú público vía frontend/backend.
+2. Backend recupera datos de dominio.
+3. Imágenes se sirven desde S3 (URL pública o resuelta por frontend).
+
+---
+
+## 8) Mapa de módulos del repositorio
 
 ```text
 Proyecto_dev_sec_ops/
 ├─ docker-compose.yml
+├─ infra/
+│  └─ nginx/
+│     ├─ Dockerfile
+│     ├─ nginx.conf
+│     └─ entrypoint.sh
 ├─ ApiRestaurante/
 │  ├─ app/
-│  │  ├─ routers/          # Endpoints backend
-│  │  ├─ services/         # Lógica de negocio
-│  │  ├─ repositories/     # Acceso a datos
-│  │  ├─ models/           # ORM SQLAlchemy
-│  │  ├─ schemas/          # DTOs/Pydantic
-│  │  ├─ core/ utils/      # Seguridad/JWT/helpers
-│  │  └─ db.py             # Configuración PostgreSQL
-│  └─ tests/               # Pruebas unitarias por capa
-└─ AppRestaurante/
-   ├─ app/
-   │  ├─ routers/          # Endpoints web + acciones UI
-   │  ├─ services/         # Integración backend + S3
-   │  ├─ core/             # Config y seguridad
-   │  ├─ templates/        # Vistas HTML
-   │  ├─ static/           # CSS/imagenes
-   │  └─ ui/               # Helpers de presentación
-   └─ tests/               # Pruebas de servicios
+│  │  ├─ routers/
+│  │  ├─ services/
+│  │  ├─ repositories/
+│  │  ├─ models/
+│  │  ├─ schemas/
+│  │  ├─ core/
+│  │  └─ utils/
+│  └─ tests/
+├─ AppRestaurante/
+│  ├─ app/
+│  │  ├─ routers/
+│  │  ├─ services/
+│  │  ├─ core/
+│  │  ├─ templates/
+│  │  ├─ static/
+│  │  └─ ui/
+│  └─ tests/
+├─ e2e/
+│  ├─ tests/
+│  └─ playwright.config.ts
+└─ .github/workflows/
+   └─ api-tests.yml
 ```
 
 ---
 
-## 6) Consideraciones DevSecOps observables
+## 9) Despliegue y validación operativa
 
-- Separación de responsabilidades entre frontend web y backend API.
-- Uso de JWT para control de acceso.
-- Variables de entorno para secretos e integración cloud (S3/AWS).
-- Persistencia desacoplada en contenedor PostgreSQL con volumen.
-- Cobertura de pruebas por servicios/repositorios en ambos proyectos.
-
----
-
-## 7) Recomendación de evolución del mapa
-
-Si quieres, este mapa puede extenderse con:
-
-- Diagrama de secuencia por caso de uso (login, crear plato, subir imagen).
-- Matriz de amenazas (STRIDE) por componente.
-- Mapa de controles DevSecOps por etapa de CI/CD.
-
----
-
-## 8) Manual de deployment
-
-### 8.1 Prerrequisitos
-
-- Docker y Docker Compose instalados en el host.
-- Puertos disponibles: `8000` (frontend), `5001` (backend), `5432` (PostgreSQL).
-- Archivo de variables de entorno preparado desde plantilla:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-> Nota de seguridad: no publicar credenciales reales en repositorio. Gestionar secretos fuera del control de versiones.
-
-### 8.2 Despliegue de servicios
-
-Desde la raíz del proyecto (`Proyecto_dev_sec_ops/`):
+### Despliegue
 
 ```powershell
 docker compose --env-file .env up -d --build
 docker compose ps
 ```
 
-Servicios esperados:
-
-- `postgres_db` (PostgreSQL)
-- `backend_api` (ApiRestaurante)
-- `frontend_api` (AppRestaurante)
-
-### 8.3 Restauración de base de datos (obligatoria para acceso inicial)
-
-Para operar el sistema con datos iniciales, restaurar uno de los backups disponibles:
-
-- `backup_complete.sql`
-- `backup_complete.dump`
-
-#### Opción A: restaurar desde SQL
+### Validación de conectividad
 
 ```powershell
-$DB_CONTAINER = docker compose ps -q postgres_db
-docker cp .\backup_complete.sql "$DB_CONTAINER`:/tmp/backup_complete.sql"
-docker compose exec postgres_db psql -U postgres -d Restaurante -f /tmp/backup_complete.sql
+curl -I http://localhost
+curl -k https://localhost/ -o NUL -s -w "%{http_code}`n"
 ```
 
-#### Opción B: restaurar desde DUMP
+Resultados esperados:
 
-```powershell
-$DB_CONTAINER = docker compose ps -q postgres_db
-docker cp .\backup_complete.dump "$DB_CONTAINER`:/tmp/backup_complete.dump"
-docker compose exec postgres_db pg_restore -U postgres -d Restaurante --clean --if-exists /tmp/backup_complete.dump
-```
+- HTTP responde `301` hacia HTTPS.
+- HTTPS responde `200` para la aplicación web.
 
-### 8.4 Validación post-despliegue
+---
 
-Validar tablas en la base restaurada:
+## 10) Resumen arquitectónico
 
-```powershell
-docker compose exec postgres_db psql -U postgres -d Restaurante -c "\dt"
-```
-
-Validar acceso funcional:
-
-- Frontend: `http://localhost:8000`
-- Backend API publicado: `http://localhost:5001`
-
-### 8.5 Operación y recuperación
-
-Comandos operativos comunes:
-
-```powershell
-# Ver logs en tiempo real
-docker compose logs -f
-
-# Reiniciar servicios
-docker compose restart
-
-# Detener conservando volumen de datos
-docker compose down
-
-# Detener y eliminar volumen (entorno limpio)
-docker compose down -v
-```
-
-### 8.6 Troubleshooting mínimo
-
-- Si falla conexión a base de datos, verificar estado de `postgres_db` con `docker compose ps`.
-- Si el login no funciona tras desplegar, confirmar que la restauración de backup se ejecutó sin errores.
-- Si hay error de puertos ocupados, cambiar mapeos en `docker-compose.yml` y recrear servicios.
+La arquitectura implementa separación por capas, seguridad de transporte, integración cloud para binarios, automatización de pruebas y operación reproducible con contenedores. Esto habilita evolución controlada, menor acoplamiento y mejor mantenibilidad en un enfoque DevSecOps.

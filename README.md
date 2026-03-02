@@ -324,6 +324,7 @@ docker compose --env-file .env restart secure_gateway
 
 | Documento | Descripción |
 |-----------|-------------|
+| [Deployment](docs/DEPLOYMENT.md) | Instructivo de despliegue paso a paso |
 | [API Documentation](docs/API_DOCUMENTATION.md) | Documentación completa de los 30 endpoints |
 | [Cobertura Requerimientos](docs/COBERTURA_REQUERIMIENTOS.md) | Tabla de cumplimiento de 24 requerimientos funcionales |
 | [Cobertura RNF](docs/COBERTURA_RNF.md) | Cobertura de requerimientos no funcionales |
