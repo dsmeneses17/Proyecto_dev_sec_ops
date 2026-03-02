@@ -321,6 +321,7 @@ COPY public.users (id, nombre_completo, usuario, password, rol, activo, email) F
 4	Ana Rodríguez	ana.rodriguez	$2b$12$SzKzalNx0gHsS.r77EOgv.LVGE78Qr2qUsvDRzMCS4FDtX7MGcgre	cliente	t	ana.rodriguez@mail.com
 5	Pedro Martínez	pedro.martinez	$2b$12$SzKzalNx0gHsS.r77EOgv.LVGE78Qr2qUsvDRzMCS4FDtX7MGcgre	cliente	t	pedro.martinez@mail.com
 6	Laura Sánchez	laura.sanchez	$2b$12$SzKzalNx0gHsS.r77EOgv.LVGE78Qr2qUsvDRzMCS4FDtX7MGcgre	cliente	t	laura.sanchez@mail.com
+7	Test Client	testclient	$2b$12$lTc3kIMq8B2kBTnrIFrAgukKbF9TiKm1w89LdMfivRZA9sBAnXGjq	cliente	t	testclient@mail.com
 \.
 
 
@@ -328,7 +329,7 @@ COPY public.users (id, nombre_completo, usuario, password, rol, activo, email) F
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 6, true);
+SELECT pg_catalog.setval('public.users_id_seq', 7, true);
 
 
 --

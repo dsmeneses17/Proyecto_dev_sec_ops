@@ -43,10 +43,14 @@
               <a class="nav-link" href="/menu">Menú Público</a>
             </li>
             {% else %}
+            {% set user_rol = request.cookies.get('rol', '') %}
+
             <li class="nav-item">
               <a class="nav-link active" href="/">Inicio</a>
             </li>
 
+            {# ── Admin navigation ── #}
+            {% if user_rol != 'cliente' %}
             <li class="nav-item">
               <a class="nav-link" href="/categories">Categorías</a>
             </li>
@@ -72,6 +76,14 @@
             <li class="nav-item">
               <a class="nav-link" href="/analytics">Analytics</a>
             </li>
+            {% endif %}
+
+            {# ── Client navigation ── #}
+            {% if user_rol == 'cliente' %}
+            <li class="nav-item">
+              <a class="nav-link" href="/cliente">Restaurantes</a>
+            </li>
+            {% endif %}
 
             <li class="nav-item">
               <a class="nav-link" href="/api/v1/auth/logout">Cerrar sesión</a>

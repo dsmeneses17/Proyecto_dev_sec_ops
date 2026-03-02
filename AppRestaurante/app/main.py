@@ -158,13 +158,33 @@ def robots_txt():
 
 @app.get("/", response_class=HTMLResponse)
 def mostrar_login(request: Request):
-    # If the user is already authenticated, treat / as "Inicio" and send them to
-    # their dashboard instead of showing the login screen.
+    # If the user is already authenticated, route to the appropriate dashboard.
     token = request.cookies.get("access_token")
     if token:
+        rol = request.cookies.get("rol", "")
+        if rol == "cliente":
+            return RedirectResponse(url="/cliente", status_code=303)
         return RedirectResponse(url="/restaurants/", status_code=303)
 
     return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.get("/cliente", response_class=HTMLResponse)
+def cliente_dashboard(request: Request):
+    """Dashboard for clients: shows all available restaurants to explore."""
+    from app.services.menu_service import list_public_restaurants
+    from app.services.storage import build_display_url
+
+    restaurants = list_public_restaurants()
+    # Sign logo URLs so images display correctly
+    for r in restaurants:
+        if r.get("logo_url"):
+            r["logo_url"] = build_display_url(r["logo_url"])
+
+    return templates.TemplateResponse(
+        "cliente_dashboard.html",
+        {**get_template_context(request), "restaurants": restaurants},
+    )
 
 
 
