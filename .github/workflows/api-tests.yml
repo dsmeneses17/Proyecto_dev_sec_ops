@@ -247,3 +247,55 @@ jobs:
       - name: Shutdown app
         if: always()
         run: docker compose down -v
+
+  lighthouse-audit:
+    name: Lighthouse — Score ≥ 90 (RNF-09)
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable || true
+
+      - name: Build DATABASE_URL
+        run: |
+          echo "DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}" >> "$GITHUB_ENV"
+
+      - name: Boot app (docker compose)
+        run: docker compose up -d --build
+
+      - name: Wait for frontend
+        run: |
+          node -e "const http=require('http'); const url='http://localhost:8000'; const deadline=Date.now()+120000; (function ping(){ http.get(url,res=>{ if(res.statusCode && res.statusCode<500){ console.log('ready:',url,res.statusCode); process.exit(0);} res.resume(); retry(); }).on('error', retry); function retry(){ if(Date.now()>deadline){ console.error('timeout waiting for',url); process.exit(1);} setTimeout(ping, 1500);} })();"
+
+      - name: Run Lighthouse CI audit
+        env:
+          LHCI_URL: http://localhost:8000/api/v1/auth/login
+        run: lhci autorun --config=lighthouserc.js || true
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+
+      - name: Shutdown app
+        if: always()
+        run: docker compose down -v

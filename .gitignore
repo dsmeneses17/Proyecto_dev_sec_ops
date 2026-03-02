@@ -69,3 +69,6 @@ postgres_data/
 # If you ever generate local build outputs
 dist/
 build/
+
+# ---- Lighthouse CI ----
+.lighthouseci/

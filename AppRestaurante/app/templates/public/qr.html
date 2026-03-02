@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Código QR para acceder al menú digital del restaurante." />
+    <meta name="theme-color" content="#f8f9fa" />
     <title>QR Menú</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .color-picker-group {
@@ -60,6 +64,7 @@
         <h3 class="mb-4">Código QR del Menú</h3>
 
         <img id="qrPreview" src="data:image/png;base64,{{ qr_base64 }}" class="img-fluid mb-4 qr-preview"
+            alt="Código QR del menú" width="300" height="300"
             style="max-width: 300px;">
 
         <p class="text-muted">{{ url_publica }}</p>

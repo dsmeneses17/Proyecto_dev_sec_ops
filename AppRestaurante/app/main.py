@@ -3,7 +3,7 @@ import signal
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from limits import parse as parse_rate_limit
 from limits.storage import MemoryStorage
@@ -103,6 +103,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RateLimitMiddleware)
 
+
+# ---------------------------------------------------------------------------
+# Security & performance headers  (RNF-09 Lighthouse best-practices)
+# ---------------------------------------------------------------------------
+class LighthouseHeadersMiddleware(BaseHTTPMiddleware):
+    """Add headers that improve Lighthouse Performance / Best-Practices score."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Cache static assets for 1 day
+        if request.url.path.startswith("/static"):
+            response.headers["Cache-Control"] = "public, max-age=86400"
+        # Security headers expected by Lighthouse best-practices
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        return response
+
+
+app.add_middleware(LighthouseHeadersMiddleware)
+
 # Archivos estáticos
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -111,6 +130,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 PUBLIC_PATHS = [
     "/static",
     "/favicon.ico",
+    "/robots.txt",
     "/api/v1/auth/login",
     "/api/v1/auth/logout",
     "/api/v1/auth/register-client",
@@ -128,6 +148,13 @@ def _is_public_path(request_path: str) -> bool:
         return True
     return False
 # Plantillas HTML (shared)
+
+
+@app.get("/robots.txt", response_class=FileResponse, include_in_schema=False)
+def robots_txt():
+    """Serve robots.txt for Lighthouse SEO audit (RNF-09)."""
+    return FileResponse("app/static/robots.txt", media_type="text/plain")
+
 
 @app.get("/", response_class=HTMLResponse)
 def mostrar_login(request: Request):
