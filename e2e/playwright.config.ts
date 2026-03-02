@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL || 'http://localhost:8000';
+const baseURL = process.env.E2E_BASE_URL || 'https://localhost';
 
 export default defineConfig({
     testDir: './tests',
@@ -18,6 +18,7 @@ export default defineConfig({
         : [['list'], ['html', { open: 'never' }]],
     use: {
         baseURL,
+        ignoreHTTPSErrors: true,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

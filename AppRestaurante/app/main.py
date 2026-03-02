@@ -187,6 +187,23 @@ def cliente_dashboard(request: Request):
     )
 
 
+@app.middleware("http")
+async def enforce_https_middleware(request: Request, call_next):
+    if not settings.ENFORCE_HTTPS_REDIRECT:
+        return await call_next(request)
+
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    is_https = request.url.scheme == "https" or forwarded_proto.split(",")[0].strip().lower() == "https"
+
+    if not is_https:
+        https_url = str(request.url.replace(scheme="https"))
+        return RedirectResponse(url=https_url, status_code=307)
+
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 
 
 #cPUBLIC_PATHS = ["/", "/auth/login", "/auth/register"]

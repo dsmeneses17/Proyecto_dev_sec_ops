@@ -158,15 +158,24 @@ jobs:
 
       - name: Wait for frontend
         env:
-          E2E_BASE_URL: http://localhost:8000
+          E2E_BASE_URL: https://localhost
         run: |
-          node -e "const http=require('http'); const url=process.env.E2E_BASE_URL; const deadline=Date.now()+120000; (function ping(){ http.get(url,res=>{ if(res.statusCode && res.statusCode<500){ console.log('ready:',url,res.statusCode); process.exit(0);} res.resume(); retry(); }).on('error', retry); function retry(){ if(Date.now()>deadline){ console.error('timeout waiting for',url); process.exit(1);} setTimeout(ping, 1500);} })();"
+          for i in {1..80}; do
+            code=$(curl -k -s -o /dev/null -w "%{http_code}" "$E2E_BASE_URL/") || true
+            if [ -n "$code" ] && [ "$code" -lt 500 ]; then
+              echo "ready: $E2E_BASE_URL -> $code"
+              exit 0
+            fi
+            sleep 1.5
+          done
+          echo "timeout waiting for $E2E_BASE_URL"
+          exit 1
 
       - name: Diagnostics (routes + auth wiring)
         if: always()
         env:
-          FRONTEND_BASE_URL: http://localhost:8000
-          BACKEND_BASE_URL: http://localhost:5001
+          FRONTEND_BASE_URL: https://localhost
+          BACKEND_BASE_URL: https://localhost/backend-api
         run: |
           set -euxo pipefail
 
@@ -174,21 +183,21 @@ jobs:
           docker compose ps
 
           echo "--- frontend: GET / ---"
-          curl -sS -D- -o /dev/null "$FRONTEND_BASE_URL/" | head -n 40
+          curl -k -sS -D- -o /dev/null "$FRONTEND_BASE_URL/" | head -n 40
 
           echo "--- frontend: GET /api/v1/auth/login (UI) ---"
-          curl -sS -D- -o /dev/null "$FRONTEND_BASE_URL/api/v1/auth/login" | head -n 60
+          curl -k -sS -D- -o /dev/null "$FRONTEND_BASE_URL/api/v1/auth/login" | head -n 60
 
           echo "--- backend: GET common docs/health candidates ---"
           for p in /docs /openapi.json /health /api/v1/docs /api/v1/openapi.json /api/v1/health; do
             echo ">>> GET $BACKEND_BASE_URL$p"
-            curl -sS -D- -o /dev/null "$BACKEND_BASE_URL$p" | head -n 20 || true
+            curl -k -sS -D- -o /dev/null "$BACKEND_BASE_URL$p" | head -n 20 || true
           done
 
           echo "--- backend: POST auth/login candidates (expect 200/4xx, but not 404 if route exists) ---"
           for p in /auth/login /api/v1/auth/login; do
             echo ">>> POST $BACKEND_BASE_URL$p"
-            curl -sS -D- -o /dev/null -X POST "$BACKEND_BASE_URL$p" \
+            curl -k -sS -D- -o /dev/null -X POST "$BACKEND_BASE_URL$p" \
               -H 'content-type: application/json' \
               --data '{"usuario":"__probe__","password":"__probe__"}' | head -n 40 || true
           done
@@ -228,7 +237,7 @@ jobs:
         working-directory: e2e
         env:
           CI: "true"
-          E2E_BASE_URL: http://localhost:8000
+          E2E_BASE_URL: https://localhost
         run: npm run test:ci
 
       - name: Upload Playwright report

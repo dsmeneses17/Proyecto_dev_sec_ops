@@ -40,6 +40,9 @@ class Settings:
         "IMAGE_ALLOWED_TARGETS",
         "logo,dish,general",
     )
+    SESSION_COOKIE_SECURE: bool = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
+    SESSION_COOKIE_SAMESITE: str = os.getenv("SESSION_COOKIE_SAMESITE", "lax")
+    ENFORCE_HTTPS_REDIRECT: bool = os.getenv("ENFORCE_HTTPS_REDIRECT", "true").lower() == "true"
 
 
 settings = Settings()

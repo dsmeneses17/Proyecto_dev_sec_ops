@@ -28,8 +28,9 @@ docker compose --env-file .env up --build -d
 Esto levanta:
 
 - `postgres_db` → `localhost:5432`
-- `backend_api` (`ApiRestaurante`) → `localhost:5001`
-- `frontend_api` (`AppRestaurante`) → `localhost:8000`
+- `backend_api` (`ApiRestaurante`) → servicio interno Docker
+- `frontend_api` (`AppRestaurante`) → servicio interno Docker
+- `secure_gateway` (Nginx + TLS) → `https://localhost`
 
 ### 1) Inicializar tablas
 
@@ -55,9 +56,11 @@ docker compose --env-file .env ps
 
 ### 3) Accesos
 
-- App web: http://localhost:8000
-- API backend (root): http://localhost:5001/
-- Swagger backend: http://localhost:5001/docs
+- App web (HTTPS): https://localhost
+- API backend por gateway TLS (root): https://localhost/backend-api/
+- Swagger backend por gateway TLS: https://localhost/backend-api/docs
+
+> Nota: el gateway genera un certificado autofirmado automáticamente si no encuentra uno montado. En navegador puede aparecer advertencia de confianza en entorno local.
 
 ### 4) Ver logs
 

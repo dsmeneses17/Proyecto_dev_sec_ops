@@ -17,8 +17,6 @@ services:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
     depends_on:
       - postgres_db
-    ports:
-      - "5001:5000"
 
   frontend_api:
     build: ./AppRestaurante
@@ -37,9 +35,22 @@ services:
       IMAGE_MAX_FILE_MB: ${IMAGE_MAX_FILE_MB:-5}
       IMAGE_ALLOWED_CONTENT_TYPES: ${IMAGE_ALLOWED_CONTENT_TYPES:-image/jpeg,image/png,image/webp}
       IMAGE_ALLOWED_TARGETS: ${IMAGE_ALLOWED_TARGETS:-logo,dish,general}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-lax}
+      ENFORCE_HTTPS_REDIRECT: ${ENFORCE_HTTPS_REDIRECT:-true}
     stop_grace_period: 40s
+
+  secure_gateway:
+    build: ./infra/nginx
+    depends_on:
+      - frontend_api
+      - backend_api
+    environment:
+      TLS_CERT_CN: ${TLS_CERT_CN:-localhost}
+      TLS_CERT_DAYS: ${TLS_CERT_DAYS:-365}
     ports:
-      - "8000:8000"
+      - "80:80"
+      - "443:443"
 
 volumes:
   postgres_data:

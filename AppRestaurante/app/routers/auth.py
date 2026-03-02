@@ -2,9 +2,21 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from app.services import auth_service
+from app.core.config import settings
 from app.ui.templates import templates
 
 router = APIRouter()
+
+
+def _set_auth_cookie(response: RedirectResponse, key: str, value: str, httponly: bool = False):
+    response.set_cookie(
+        key,
+        value,
+        httponly=httponly,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+        path="/",
+    )
 
 
 
@@ -69,11 +81,11 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
     #Admin con restaurante registrado → editar restaurante
     if rol == "admin":
         redirect = RedirectResponse(url="/restaurants", status_code=303)
-        redirect.set_cookie("access_token", token, httponly=True, secure=False, path="/")
-        redirect.set_cookie("rol", rol)
-        redirect.set_cookie("user_id", str(user_id))
-        redirect.set_cookie("restaurant_id", str(restaurant_id))
-        redirect.set_cookie("restaurant_slug", str(restaurant_slug))
+        _set_auth_cookie(redirect, "access_token", token, httponly=True)
+        _set_auth_cookie(redirect, "rol", rol)
+        _set_auth_cookie(redirect, "user_id", str(user_id))
+        _set_auth_cookie(redirect, "restaurant_id", str(restaurant_id))
+        _set_auth_cookie(redirect, "restaurant_slug", str(restaurant_slug))
         return redirect
 
 
@@ -81,20 +93,20 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
     # Cliente → client dashboard with all restaurants
     if rol == "cliente":
         redirect = RedirectResponse(url="/cliente", status_code=303)
-        redirect.set_cookie("access_token", token, httponly=True, secure=False, path="/")
-        redirect.set_cookie("rol", rol)
-        redirect.set_cookie("user_id", str(user_id))
-        redirect.set_cookie("restaurant_id", str(restaurant_id))
-        redirect.set_cookie("restaurant_slug", str(restaurant_slug))
+        _set_auth_cookie(redirect, "access_token", token, httponly=True)
+        _set_auth_cookie(redirect, "rol", rol)
+        _set_auth_cookie(redirect, "user_id", str(user_id))
+        _set_auth_cookie(redirect, "restaurant_id", str(restaurant_id))
+        _set_auth_cookie(redirect, "restaurant_slug", str(restaurant_slug))
 
         return redirect
 
     # Otros roles
     redirect = RedirectResponse(url="/", status_code=303)
-    redirect.set_cookie("access_token", token, httponly=True, secure=True)
-    redirect.set_cookie("rol", rol)
-    redirect.set_cookie("user_id", str(user_id))
-    redirect.set_cookie("restaurant_id", str(restaurant_id))
-    redirect.set_cookie("restaurant_slug", str(restaurant_slug))
+    _set_auth_cookie(redirect, "access_token", token, httponly=True)
+    _set_auth_cookie(redirect, "rol", rol)
+    _set_auth_cookie(redirect, "user_id", str(user_id))
+    _set_auth_cookie(redirect, "restaurant_id", str(restaurant_id))
+    _set_auth_cookie(redirect, "restaurant_slug", str(restaurant_slug))
     return redirect
 

@@ -11,6 +11,7 @@ from app.services.restaurant_service import (
     get_restaurant_by_id,
 )
 from app.services.storage import build_display_url
+from app.core.config import settings
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
 
@@ -156,9 +157,21 @@ def create_restaurant(
     restaurant_slug_result = resultado.get("slug")
 
     if restaurant_id_result:
-        response.set_cookie("restaurant_id", str(restaurant_id_result), path="/")
+        response.set_cookie(
+            "restaurant_id",
+            str(restaurant_id_result),
+            path="/",
+            secure=settings.SESSION_COOKIE_SECURE,
+            samesite=settings.SESSION_COOKIE_SAMESITE,
+        )
     if restaurant_slug_result:
-        response.set_cookie("restaurant_slug", str(restaurant_slug_result), path="/")
+        response.set_cookie(
+            "restaurant_slug",
+            str(restaurant_slug_result),
+            path="/",
+            secure=settings.SESSION_COOKIE_SECURE,
+            samesite=settings.SESSION_COOKIE_SAMESITE,
+        )
 
     return resultado
 
