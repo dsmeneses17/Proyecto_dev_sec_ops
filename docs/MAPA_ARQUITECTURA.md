@@ -19,7 +19,7 @@ flowchart LR
     U[Usuario / Navegador] --> FE[frontend_api\nAppRestaurante\n:8000]
     FE --> BE[backend_api\nApiRestaurante\n:5000]
     BE --> DB[(postgres_db\nPostgreSQL 15\n:5432)]
-    FE --> S3[(Object Storage S3\n(bucket configurable))]
+    FE --> S3[(Object Storage S3\nbucket configurable)]
 ```
 
 Servicios declarados en `docker-compose.yml`:
