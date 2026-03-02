@@ -4,6 +4,7 @@ from fastapi import APIRouter, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 
+from app.core.config import settings
 from app.models.restaurant_model import RestaurantCreate, RestaurantOut
 from app.services.restaurant_service import (
     create_or_update_restaurant,
@@ -11,7 +12,6 @@ from app.services.restaurant_service import (
     get_restaurant_by_id,
 )
 from app.services.storage import build_display_url
-from app.core.config import settings
 from app.ui.templates import templates
 from app.utils.templates import get_template_context
 

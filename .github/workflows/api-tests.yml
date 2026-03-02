@@ -291,11 +291,20 @@ jobs:
 
       - name: Wait for frontend
         run: |
-          node -e "const http=require('http'); const url='http://localhost:8000'; const deadline=Date.now()+120000; (function ping(){ http.get(url,res=>{ if(res.statusCode && res.statusCode<500){ console.log('ready:',url,res.statusCode); process.exit(0);} res.resume(); retry(); }).on('error', retry); function retry(){ if(Date.now()>deadline){ console.error('timeout waiting for',url); process.exit(1);} setTimeout(ping, 1500);} })();"
+          for i in {1..80}; do
+            code=$(curl -k -s -o /dev/null -w "%{http_code}" "https://localhost/") || true
+            if [ -n "$code" ] && [ "$code" -lt 500 ]; then
+              echo "ready: https://localhost -> $code"
+              exit 0
+            fi
+            sleep 1.5
+          done
+          echo "timeout waiting for https://localhost"
+          exit 1
 
       - name: Run Lighthouse CI audit
         env:
-          LHCI_URL: http://localhost:8000/api/v1/auth/login
+          LHCI_URL: https://localhost/api/v1/auth/login
         run: lhci autorun --config=lighthouserc.js || true
 
       - name: Upload Lighthouse report
