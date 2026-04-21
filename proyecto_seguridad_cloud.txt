@@ -1,0 +1,91 @@
+Este documento describe la Entrega No. 2 del proyecto del curso
+Seguridad en la Cloud (MSIN 4215) de la Maestría en Seguridad de la
+Información de la Universidad de los Andes.
+
+Contexto general
+El objetivo es evolucionar una aplicación previamente desarrollada
+(LiveMenu) desde un entorno local basado en contenedores hacia una
+infraestructura productiva en la nube (AWS o GCP), incorporando
+controles avanzados de seguridad.
+
+Se recomienda mantener el stack tecnológico basado en: - Backend: Python
+con FastAPI
+- Frontend: React
+- Arquitectura: capas (Handlers, Services, Repositories)
+- Requisito clave: Dockerización completa para garantizar portabilidad
+
+Objetivo principal
+Desplegar la aplicación en la nube asegurando: - Alta disponibilidad
+- Integridad de los datos
+- Implementación de estándares avanzados de seguridad
+
+Alcance del despliegue
+
+La solución debe migrarse a servicios gestionados:
+
+1.  Capa de aplicación
+    Backend y frontend desplegados en servicios como: AWS ECS / Fargate
+    GCP Cloud Run
+
+2.  Capa de datos
+    Base de datos PostgreSQL en: AWS RDS
+    GCP Cloud SQL
+    Configuración obligatoria de alta disponibilidad (Multi-AZ)
+
+3.  Almacenamiento de imágenes
+    Uso de: AWS S3 o Google Cloud Storage
+    Manejo de variantes de imágenes (thumbnail, medium, large)
+
+Requerimientos de seguridad
+
+1.  Cifrado de datos
+    En reposo: Base de datos y almacenamiento cifrados
+    En tránsito: Todo acceso mediante HTTPS/TLS
+
+2.  Gestión de secretos
+    Prohibido uso de archivos .env en producción
+    Uso de Secrets Manager
+    Rotación automática cada 40 días
+    Principio de menor privilegio
+
+Estrategia de continuidad
+
+Backups automáticos diarios (15 días)
+Versionamiento en storage
+Definición de RPO y RTO
+Disponibilidad objetivo: 99.9%
+
+Seguridad de contenedores
+
+Escaneo de vulnerabilidades
+Imágenes base seguras
+Bloqueo de despliegue con vulnerabilidades críticas
+
+WAF
+
+Protección contra OWASP Top 10
+Rate limiting
+Filtrado geográfico opcional
+
+Infraestructura como código
+
+Uso de Terraform o CloudFormation
+
+Entregables
+
+Diagrama de arquitectura
+Documentación de seguridad
+Informe de vulnerabilidades
+Video demostrativo
+Repositorio Git
+
+Criterios de evaluación
+
+Despliegue en nube (20%)
+Arquitectura (10%)
+Cifrado (15%)
+Secretos (15%)
+Backup (5%)
+Seguridad (15%)
+WAF (15%)
+Trabajo en equipo (5%)

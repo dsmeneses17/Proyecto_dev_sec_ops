@@ -2,9 +2,15 @@ locals {
   prefix        = "livemenu-${var.environment}"
   root_domain   = trimsuffix(var.dns_domain, ".")
   frontend_fqdn = "${var.frontend_subdomain}.${trimsuffix(var.dns_domain, ".")}"
+  images_bucket_name = length(trimspace(var.images_bucket_name)) > 0 ? var.images_bucket_name : "${local.prefix}-images-${var.project_id}"
 
   backend_env_vars = merge(
     var.backend_env_vars,
+    var.create_storage ? {
+      STORAGE_PROVIDER = "gcs"
+      GCP_PROJECT_ID   = var.project_id
+      GCS_BUCKET_NAME  = local.images_bucket_name
+    } : {},
     var.create_cloud_sql ? {
       DATABASE_URL = format(
         "postgresql+psycopg2://%s:%s@/%s?host=/cloudsql/%s",
@@ -13,6 +19,15 @@ locals {
         var.db_name,
         module.cloud_sql[0].connection_name
       )
+    } : {}
+  )
+
+  frontend_env_vars = merge(
+    var.frontend_env_vars,
+    var.create_storage ? {
+      STORAGE_PROVIDER = "gcs"
+      GCP_PROJECT_ID   = var.project_id
+      GCS_BUCKET_NAME  = local.images_bucket_name
     } : {}
   )
 
@@ -29,7 +44,10 @@ resource "google_project_service" "required" {
     "artifactregistry.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
-    "sqladmin.googleapis.com"
+    "sqladmin.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "storage.googleapis.com"
   ])
 
   project            = var.project_id
@@ -61,6 +79,25 @@ resource "google_service_account" "frontend" {
   display_name = "LiveMenu Frontend ${var.environment}"
 }
 
+resource "google_service_account" "worker" {
+  count = var.create_storage ? 1 : 0
+
+  account_id   = "lm-worker-${var.environment}"
+  display_name = "LiveMenu Worker ${var.environment}"
+}
+
+module "storage" {
+  count  = var.create_storage ? 1 : 0
+  source = "../../modules/storage"
+
+  bucket_name        = local.images_bucket_name
+  location           = var.region
+  versioning_enabled = true
+  labels             = local.labels
+
+  depends_on = [google_project_service.required]
+}
+
 module "backend" {
   count  = var.create_cloud_run ? 1 : 0
   source = "../../modules/cloud_run_service"
@@ -88,6 +125,30 @@ resource "google_project_iam_member" "backend_cloud_sql_client" {
   member  = "serviceAccount:${google_service_account.backend[0].email}"
 }
 
+resource "google_storage_bucket_iam_member" "backend_object_viewer" {
+  count = (var.create_storage && var.create_cloud_run) ? 1 : 0
+
+  bucket = module.storage[0].bucket_name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.backend[0].email}"
+}
+
+resource "google_storage_bucket_iam_member" "frontend_object_admin" {
+  count = (var.create_storage && var.create_cloud_run) ? 1 : 0
+
+  bucket = module.storage[0].bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.frontend[0].email}"
+}
+
+resource "google_storage_bucket_iam_member" "worker_object_admin" {
+  count = var.create_storage ? 1 : 0
+
+  bucket = module.storage[0].bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.worker[0].email}"
+}
+
 module "frontend" {
   count  = var.create_cloud_run ? 1 : 0
   source = "../../modules/cloud_run_service"
@@ -105,7 +166,7 @@ module "frontend" {
     {
       BACKEND_URL = format("%s/api/v1/", trimsuffix(module.backend[0].uri, "/"))
     },
-    var.frontend_env_vars
+    local.frontend_env_vars
   )
 
   depends_on = [google_project_service.required]

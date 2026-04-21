@@ -140,15 +140,38 @@ Lunes 9-18' rows="5">
       const uploadData = new FormData();
       uploadData.append("file", file);
 
-      const uploadResp = await fetch(`/uploads/image?target=${encodeURIComponent(target)}`, {
-        method: "POST",
-        body: uploadData
-      });
-
-      const uploadJson = await uploadResp.json().catch(() => ({}));
-      if (!uploadResp.ok || !uploadJson.url) {
-        throw new Error(uploadJson.detail || "No fue posible subir la imagen.");
+      let uploadResp;
+      try {
+        console.log(`[Upload] Iniciando POST a /uploads/image?target=${target}`);
+        uploadResp = await fetch(`/uploads/image?target=${encodeURIComponent(target)}`, {
+          method: "POST",
+          body: uploadData
+        });
+        console.log(`[Upload] Respuesta recibida status=${uploadResp.status}`);
+      } catch (error) {
+        const msg = `No se pudo conectar al servicio de carga: ${error.message || error}`;
+        console.error(`[Upload] Error de conexión: ${msg}`);
+        throw new Error(msg);
       }
+
+      const uploadText = await uploadResp.text();
+      console.log(`[Upload] Response body (${uploadText.length} bytes):`, uploadText.substring(0, 500));
+      let uploadJson = {};
+      if (uploadText) {
+        try {
+          uploadJson = JSON.parse(uploadText);
+        } catch {
+          uploadJson = { raw: uploadText };
+        }
+      }
+
+      if (!uploadResp.ok || !uploadJson.url) {
+        const detail = uploadJson.detail || uploadJson.error || uploadJson.raw || uploadText || "No fue posible subir la imagen.";
+        const fullError = `Error al subir la imagen (HTTP ${uploadResp.status}): ${detail}`;
+        console.error(`[Upload] ${fullError}`);
+        throw new Error(fullError);
+      }
+      console.log(`[Upload] Exito: URL=${uploadJson.url}`);
       return uploadJson.url;
     }
 

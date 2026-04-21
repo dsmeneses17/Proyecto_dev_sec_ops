@@ -37,3 +37,11 @@ output "frontend_cloud_run_url" {
 output "backend_cloud_run_url" {
   value = var.create_cloud_run ? module.backend[0].uri : null
 }
+
+output "images_bucket" {
+  value = var.create_storage ? module.storage[0].bucket_name : null
+}
+
+output "worker_service_account_email" {
+  value = var.create_storage ? google_service_account.worker[0].email : null
+}

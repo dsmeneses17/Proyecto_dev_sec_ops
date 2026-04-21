@@ -2,6 +2,20 @@ resource "google_compute_security_policy" "this" {
   name        = var.name
   description = var.description
 
+  # Allow all frontend traffic (non-API routes)
+  rule {
+    priority = 100
+    action   = "allow"
+
+    match {
+      expr {
+        expression = "!request.path.startsWith('/api')"
+      }
+    }
+
+    description = "Allow all frontend (non-API) traffic"
+  }
+
   # Public owner registration accepts natural addresses like "Calle 1 # 11".
   # The SQLi preconfigured rule treats "#" in form data as a SQL comment, so
   # allow this public route before the WAF rules to avoid that false positive.

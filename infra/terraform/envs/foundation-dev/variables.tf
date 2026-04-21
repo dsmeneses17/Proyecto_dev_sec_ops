@@ -18,6 +18,18 @@ variable "create_cloud_run" {
   default     = false
 }
 
+variable "create_storage" {
+  description = "Si true, crea bucket de imagenes en Cloud Storage"
+  type        = bool
+  default     = true
+}
+
+variable "images_bucket_name" {
+  description = "Nombre del bucket de imagenes. Si vacio, se autogenera"
+  type        = string
+  default     = ""
+}
+
 variable "frontend_image" {
   description = "Imagen del frontend en Artifact Registry"
   type        = string

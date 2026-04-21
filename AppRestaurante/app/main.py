@@ -13,7 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.core.security import decode_token
 from app.routers import analytics as analytics_router
-from app.routers import auth, category, dish, public_menu, register_owner, restaurant, upload
+from app.routers import auth, category, dish, internal_image, public_menu, register_owner, restaurant, upload
 from app.services.image_worker_pool import ImageProcessingConfig, ImageWorkerPool
 from app.ui.templates import templates
 
@@ -131,6 +131,7 @@ PUBLIC_PATHS = [
     "/static",
     "/favicon.ico",
     "/robots.txt",
+    "/media",
     "/api/v1/auth/login",
     "/api/v1/auth/logout",
     "/api/v1/auth/register-client",
@@ -265,6 +266,15 @@ async def jwt_middleware(request: Request, call_next):
     if _is_public_path(request.url.path):
         return await call_next(request)
 
+    accepts = (request.headers.get("accept") or "").lower()
+    requested_with = (request.headers.get("x-requested-with") or "").lower()
+    is_api_or_ajax = (
+        request.url.path.startswith("/api/")
+        or request.url.path.startswith("/uploads/")
+        or "application/json" in accepts
+        or requested_with == "xmlhttprequest"
+    )
+
     auth_header = request.headers.get("Authorization")
     token = None
 
@@ -274,12 +284,23 @@ async def jwt_middleware(request: Request, call_next):
         token = request.cookies.get("access_token")
 
     if not token:
+        if is_api_or_ajax:
+            return JSONResponse(status_code=401, content={"detail": "No autenticado"})
         return RedirectResponse(url="/", status_code=303)
 
     try:
         payload = decode_token(token)
         request.state.user = payload
     except Exception:
+        if is_api_or_ajax:
+            response = JSONResponse(status_code=401, content={"detail": "Token invalido o expirado"})
+            response.delete_cookie("access_token")
+            response.delete_cookie("rol")
+            response.delete_cookie("user_id")
+            response.delete_cookie("restaurant_id")
+            response.delete_cookie("restaurant_slug")
+            return response
+
         # Token invalid/expired -> clear cookies so we don't loop and send to login
         redirect = RedirectResponse(url="/", status_code=303)
         redirect.delete_cookie("access_token")
@@ -297,6 +318,7 @@ app.include_router(restaurant.router, prefix="/restaurants", tags=["restaurantes
 app.include_router(category.router, prefix="/categories", tags=["categorias"])
 app.include_router(dish.router, prefix="/platos", tags=["platos"])
 app.include_router(upload.router, prefix="/uploads", tags=["uploads"])
+app.include_router(internal_image.router)
 app.include_router(public_menu.router)
 app.include_router(register_owner.router)
 app.include_router(analytics_router.router)

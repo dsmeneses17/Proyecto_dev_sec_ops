@@ -2,6 +2,7 @@ import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from io import BytesIO
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -9,6 +10,9 @@ from fastapi import HTTPException
 from PIL import Image, UnidentifiedImageError
 
 from app.services.storage import StorageConfigurationError, upload_bytes_to_object_storage
+
+
+logger = logging.getLogger(__name__)
 
 OUTPUT_FORMAT = "WEBP"
 OUTPUT_EXTENSION = ".webp"
@@ -151,6 +155,12 @@ class ImageWorkerPool:
                 if not job.result_future.done():
                     job.result_future.set_result(result)
             except Exception as exc:
+                logger.exception(
+                    "Image worker failed target=%s user_id=%s source_content_type=%s",
+                    job.target,
+                    job.user_id,
+                    job.source_content_type,
+                )
                 if not job.result_future.done():
                     job.result_future.set_exception(exc)
             finally:
@@ -159,6 +169,14 @@ class ImageWorkerPool:
     async def _process_job(self, job: ImageProcessingJob) -> dict[str, Any]:
         loop = asyncio.get_running_loop()
         image_id = uuid4().hex
+        logger.info(
+            "Processing image job_id=%s user_id=%s target=%s size=%s content_type=%s",
+            image_id,
+            job.user_id,
+            job.target,
+            len(job.image_content),
+            job.source_content_type,
+        )
         try:
             processed_variants = await loop.run_in_executor(
                 self.executor,
@@ -166,13 +184,16 @@ class ImageWorkerPool:
                 job.image_content,
                 self.config.variants,
             )
+            logger.debug("Image variants processed job_id=%s count=%s", image_id, len(processed_variants))
         except ValueError as exc:
+            logger.error("Image processing failed job_id=%s error=%s", image_id, str(exc))
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         urls: dict[str, str] = {}
         for variant_name, variant_content in processed_variants.items():
             filename = f"{image_id}_{variant_name}{OUTPUT_EXTENSION}"
             object_name = f"uploads/{job.user_id}/{job.target}/{filename}"
+            logger.debug("Uploading variant job_id=%s variant=%s object_name=%s size=%s", image_id, variant_name, object_name, len(variant_content))
             try:
                 urls[variant_name] = await asyncio.to_thread(
                     upload_bytes_to_object_storage,
@@ -180,9 +201,12 @@ class ImageWorkerPool:
                     object_name,
                     OUTPUT_CONTENT_TYPE,
                 )
+                logger.info("Variant uploaded job_id=%s variant=%s url=%s", image_id, variant_name, urls[variant_name])
             except StorageConfigurationError as exc:
+                logger.error("Storage not configured job_id=%s variant=%s error=%s", image_id, variant_name, str(exc))
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
             except RuntimeError as exc:
+                logger.error("Upload failed job_id=%s variant=%s error=%s", image_id, variant_name, str(exc))
                 raise HTTPException(status_code=502, detail=str(exc)) from exc
 
         return {
