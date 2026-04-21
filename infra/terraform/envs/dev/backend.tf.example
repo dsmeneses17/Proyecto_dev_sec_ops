@@ -1,0 +1,6 @@
+terraform {
+  backend "gcs" {
+    bucket = "REEMPLAZAR_BUCKET_TFSTATE"
+    prefix = "livemenu/dev"
+  }
+}

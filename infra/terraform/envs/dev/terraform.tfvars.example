@@ -1,0 +1,15 @@
+project_id     = "tu-project-id"
+region         = "us-central1"
+environment    = "dev"
+
+frontend_image = "us-central1-docker.pkg.dev/tu-project-id/livemenu/frontend:latest"
+backend_image  = "us-central1-docker.pkg.dev/tu-project-id/livemenu/backend:latest"
+
+db_tier        = "db-custom-2-4096"
+db_name        = "livemenu"
+db_user        = "livemenu_app"
+db_password    = "REEMPLAZAR_PASSWORD_DB"
+jwt_secret     = "REEMPLAZAR_JWT_SECRET_LARGO"
+
+allow_backend_unauthenticated  = true
+allow_frontend_unauthenticated = true
