@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.security import decode_token
 from app.routers import analytics as analytics_router
 from app.routers import auth, category, dish, internal_image, public_menu, register_owner, restaurant, upload
+from app.services.backend_auth import request_backend
 from app.services.image_worker_pool import ImageProcessingConfig, ImageWorkerPool
 from app.ui.templates import templates
 
@@ -228,13 +229,14 @@ async def restaurant_form(request: Request):
         return RedirectResponse(url="/", status_code=303)
 
     # Llamar a la API para obtener los datos del restaurante
-    import requests
     try:
-        resp = requests.get(
+        resp = request_backend(
+            "GET",
             f"{settings.BACKEND_URL}/admin/restaurants/{restaurant_id}",
-            headers={"Authorization": f"Bearer {token}"}
+            user_token=token,
+            timeout=10,
         )
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
             {"request": request,

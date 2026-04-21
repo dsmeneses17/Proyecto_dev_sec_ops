@@ -9,6 +9,7 @@ import logging
 import requests
 
 from app.core.config import settings
+from app.services.backend_auth import build_backend_headers
 
 ANALYTICS_URL = f"{settings.BACKEND_URL}analytics"
 
@@ -22,6 +23,7 @@ def record_menu_view(slug: str, source: str = "menu") -> None:
         requests.post(
             f"{ANALYTICS_URL}/views",
             json={"slug": slug, "source": source},
+            headers=build_backend_headers(content_type_json=True),
             timeout=3,
         )
     except Exception as exc:
@@ -43,7 +45,7 @@ def get_analytics_stats(token: str, start_date: str | None = None, end_date: str
 
         resp = requests.get(
             f"{ANALYTICS_URL}/stats",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=build_backend_headers(user_token=token),
             params=params,
             timeout=10,
         )

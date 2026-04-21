@@ -1,13 +1,31 @@
 import requests
 
 from app.core.config import settings
+from app.services.backend_auth import build_backend_headers
+
+
+def _post_backend(url: str, payload: dict, timeout: int = 15):
+    try:
+        return requests.post(
+            url,
+            json=payload,
+            headers=build_backend_headers(content_type_json=True),
+            timeout=timeout,
+        )
+    except TypeError:
+        # Backward-compatible with tests that monkeypatch requests.post without kwargs.
+        try:
+            return requests.post(url, json=payload, timeout=timeout)
+        except TypeError:
+            return requests.post(url, json=payload)
 
 
 def autenticar_usuario(usuario: str, password: str):
     # Login al backend
-    login_resp = requests.post(
+    login_resp = _post_backend(
         f"{settings.BACKEND_URL}auth/login",
-        json={"usuario": usuario, "password": password}
+        {"usuario": usuario, "password": password},
+        timeout=15,
     )
 
     if login_resp.status_code != 200:
@@ -35,11 +53,7 @@ def register_owner_with_restaurant(data: dict):
     """Register a new restaurant owner (admin) and their restaurant."""
 
     try:
-        resp = requests.post(
-            f"{settings.BACKEND_URL}auth/register-owner",
-            json=data,
-            timeout=15,
-        )
+        resp = _post_backend(f"{settings.BACKEND_URL}auth/register-owner", data, timeout=15)
 
         if resp.status_code != 200:
             detail = None
@@ -64,9 +78,9 @@ def register_client(
     """Register a new client user (no restaurant)."""
 
     try:
-        resp = requests.post(
+        resp = _post_backend(
             f"{settings.BACKEND_URL}auth/register",
-            json={
+            {
                 "nombre_completo": nombre_completo,
                 "usuario": usuario,
                 "email": email,

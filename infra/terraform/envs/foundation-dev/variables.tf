@@ -72,6 +72,12 @@ variable "allow_backend_unauthenticated" {
   default = true
 }
 
+variable "backend_ingress" {
+  description = "Ingress policy for backend Cloud Run service"
+  type        = string
+  default     = "INGRESS_TRAFFIC_ALL"
+}
+
 variable "frontend_env_vars" {
   description = "Variables de entorno adicionales para frontend"
   type        = map(string)

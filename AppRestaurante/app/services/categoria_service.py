@@ -3,19 +3,16 @@ import logging
 import requests
 
 from app.core.config import settings
+from app.services.backend_auth import build_backend_headers
 
 # URL del backend
 BACKEND_URL = f"{settings.BACKEND_URL}admin/categories/"
 
 
 def get_headers(token: str):
-    """Genera headers con Authorization Bearer"""
-    # Limpiamos cualquier comilla accidental
-    token = token.strip().strip("'").strip('"')
-    return {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token.strip()}"
-    }
+    """Genera headers con Authorization Bearer + IAM interno."""
+    return build_backend_headers(user_token=token, content_type_json=True)
+
 
 def list_categorias(token: str):
     """Lista categorías usando token enviado al backend"""
@@ -47,11 +44,10 @@ def list_categorias(token: str):
 def get_categoria(token: str, categoria_id: str):
     """Obtiene una categoría por ID desde el backend"""
     url = f"{settings.BACKEND_URL}admin/categories/{categoria_id}"
-    headers = get_headers(token)
     try:
         response = requests.get(
             url,
-            headers=headers,
+            headers=get_headers(token),
             timeout=10
         )
 
@@ -75,13 +71,11 @@ def get_categoria(token: str, categoria_id: str):
 def create_categoria(token: str, data):
     """Crea una categoría en el backend"""
     payload = data if isinstance(data, dict) else data.model_dump(exclude_none=True)
-    headers = get_headers(token)
-
     try:
         response = requests.post(
             BACKEND_URL,
             json=payload,
-            headers=headers,
+            headers=get_headers(token),
             timeout=10
         )
 
@@ -98,9 +92,8 @@ def create_categoria(token: str, data):
 
 def update_categoria(token: str, categoria_id: str, payload: dict):
     url = f"{BACKEND_URL}{categoria_id}"  # Importante slash
-    headers = get_headers(token)
     try:
-        response = requests.put(url, json=payload, headers=headers, timeout=10)
+        response = requests.put(url, json=payload, headers=get_headers(token), timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
@@ -110,9 +103,8 @@ def update_categoria(token: str, categoria_id: str, payload: dict):
 
 def delete_categoria(token: str, categoria_id: str):
     url = f"{BACKEND_URL}{categoria_id}"  # Importante el slash
-    headers = get_headers(token)
     try:
-        response = requests.delete(url, headers=headers, timeout=10)
+        response = requests.delete(url, headers=get_headers(token), timeout=10)
         response.raise_for_status()
         return {"deleted": True}
     except requests.exceptions.HTTPError as e:
@@ -122,9 +114,8 @@ def delete_categoria(token: str, categoria_id: str):
 
 def reorder_categorias(token: str, payload: dict):
     url = f"{BACKEND_URL}reorder"  # Importante el slash
-    headers = get_headers(token)
     try:
-        response = requests.patch(url, json=payload, headers=headers, timeout=10)
+        response = requests.patch(url, json=payload, headers=get_headers(token), timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:

@@ -107,6 +107,7 @@ module "backend" {
   image                 = var.backend_image
   service_account       = google_service_account.backend[0].email
   container_port        = var.backend_container_port
+  ingress               = var.backend_ingress
   allow_unauthenticated = var.allow_backend_unauthenticated
   min_instance_count    = 0
   max_instance_count    = 3
@@ -115,6 +116,16 @@ module "backend" {
   cloud_sql_instances   = var.create_cloud_sql ? [module.cloud_sql[0].connection_name] : []
 
   depends_on = [google_project_service.required, module.cloud_sql]
+}
+
+resource "google_cloud_run_v2_service_iam_member" "backend_frontend_invoker" {
+  count = var.create_cloud_run ? 1 : 0
+
+  project  = var.project_id
+  location = var.region
+  name     = module.backend[0].name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.frontend[0].email}"
 }
 
 resource "google_project_iam_member" "backend_cloud_sql_client" {

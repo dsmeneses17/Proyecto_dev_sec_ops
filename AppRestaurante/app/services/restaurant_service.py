@@ -5,16 +5,13 @@ import requests
 
 from app.core.config import settings
 from app.models.restaurant_model import RestaurantCreate
+from app.services.backend_auth import build_backend_headers
 
 BACKEND_URL = f"{settings.BACKEND_URL}admin/restaurants/restaurant"
 
 
 def _build_headers(token: str | None) -> dict:
-    safe_token = (token or "").strip()
-    return {
-        "Authorization": f"Bearer {safe_token}",
-        "Content-Type": "application/json",
-    }
+    return build_backend_headers(user_token=token, content_type_json=True)
 
 
 def _normalize_payload(data: RestaurantCreate | dict) -> dict:

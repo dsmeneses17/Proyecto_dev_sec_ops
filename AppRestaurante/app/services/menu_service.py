@@ -2,6 +2,7 @@ import requests
 
 from app.core.config import settings
 from app.models.menu import PublicMenuResponse
+from app.services.backend_auth import build_backend_headers
 from app.services.storage import build_display_url
 
 # settings.BACKEND_URL already includes the trailing `/api/v1/`
@@ -33,7 +34,7 @@ def _sign_menu_images(data: dict) -> dict:
 
 def get_public_menu(slug: str) -> PublicMenuResponse | None:
     try:
-        response = requests.get(f"{API_BASE}/{slug}")
+        response = requests.get(f"{API_BASE}/{slug}", headers=build_backend_headers(), timeout=10)
 
         if response.status_code != 200:
             return None
@@ -54,7 +55,7 @@ def list_public_restaurants() -> list[dict]:
     """
 
     try:
-        response = requests.get(f"{API_BASE}/restaurants", timeout=10)
+        response = requests.get(f"{API_BASE}/restaurants", headers=build_backend_headers(), timeout=10)
         if response.status_code != 200:
             return []
         data = response.json()

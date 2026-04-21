@@ -2,11 +2,11 @@
 
 import logging
 
-import requests as http_requests
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from app.core.config import settings
+from app.services.backend_auth import request_backend
 from app.services.analytics_service import get_analytics_stats
 from app.ui.templates import templates
 
@@ -33,12 +33,7 @@ def export_csv(
         params["end_date"] = end_date
 
     try:
-        resp = http_requests.get(
-            BACKEND_EXPORT_URL,
-            headers={"Authorization": f"Bearer {token}"},
-            params=params,
-            timeout=30,
-        )
+        resp = request_backend("GET", BACKEND_EXPORT_URL, user_token=token, params=params, timeout=30)
         if resp.status_code != 200:
             return RedirectResponse(url="/analytics", status_code=303)
 

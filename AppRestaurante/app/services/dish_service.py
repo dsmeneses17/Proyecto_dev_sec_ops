@@ -4,18 +4,16 @@ import logging
 import requests
 
 from app.core.config import settings
+from app.services.backend_auth import build_backend_headers
 
 # URL del backend de platos
 BACKEND_URL = f"{settings.BACKEND_URL}admin/dishes/"
 
 
 def get_headers(token: str):
-    """Genera headers con Authorization Bearer"""
-    token = token.strip().strip("'").strip('"')
-    return {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
+    """Genera headers con Authorization Bearer + IAM interno."""
+    return build_backend_headers(user_token=token, content_type_json=True)
+
 
 def list_dishes(token: str, categoria_id: str = None):
     """
