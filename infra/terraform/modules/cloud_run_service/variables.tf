@@ -44,6 +44,15 @@ variable "env_vars" {
   default = {}
 }
 
+variable "secret_env_vars" {
+  description = "Environment variables sourced from Secret Manager"
+  type = map(object({
+    secret  = string
+    version = optional(string, "latest")
+  }))
+  default = {}
+}
+
 variable "labels" {
   type    = map(string)
   default = {}

@@ -43,6 +43,12 @@ variable "http_forwarding_rule_name" {
   type = string
 }
 
+variable "enable_http_redirect" {
+  description = "Habilitar redireccion HTTP->HTTPS en el LB"
+  type        = bool
+  default     = true
+}
+
 variable "enable_https" {
   description = "Habilitar frontend HTTPS en el load balancer"
   type        = bool
@@ -51,6 +57,12 @@ variable "enable_https" {
 
 variable "managed_certificate_domains" {
   description = "Dominios para certificado administrado de Google"
+  type        = list(string)
+  default     = []
+}
+
+variable "self_signed_certificate_dns_names" {
+  description = "DNS names para el certificado self-signed cuando no hay certificado administrado"
   type        = list(string)
   default     = []
 }

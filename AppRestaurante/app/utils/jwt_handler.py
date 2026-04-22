@@ -3,9 +3,14 @@ from datetime import datetime, timedelta
 
 from jose import jwt
 
-SECRET_KEY = "tu_clave_secreta"
+from app.core.config import settings
+
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not set. Configure it via Secret Manager/Cloud Run env vars.")
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()

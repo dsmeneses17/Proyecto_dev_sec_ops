@@ -9,7 +9,7 @@ def _parse_csv_env(name: str, default: str) -> tuple[str, ...]:
 
 class Settings:
     DB_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/mydb")
-    SECRET_KEY = os.getenv("SECRET_KEY", "clave_super_secreta")
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
     ALGORITHM = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://backend_api:5000/api/v1/")

@@ -72,6 +72,12 @@ variable "allow_backend_unauthenticated" {
   default = true
 }
 
+variable "frontend_ingress" {
+  description = "Ingress policy for frontend Cloud Run service"
+  type        = string
+  default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+}
+
 variable "backend_ingress" {
   description = "Ingress policy for backend Cloud Run service"
   type        = string
@@ -88,6 +94,24 @@ variable "backend_env_vars" {
   description = "Variables de entorno adicionales para backend"
   type        = map(string)
   default     = {}
+}
+
+variable "jwt_secret_name" {
+  description = "Nombre del secreto en Secret Manager para la firma JWT"
+  type        = string
+  default     = "jwt-secret"
+}
+
+variable "db_password_secret_name" {
+  description = "Nombre del secreto en Secret Manager para la contraseña de DB"
+  type        = string
+  default     = "db-password"
+}
+
+variable "secret_version" {
+  description = "Versión de Secret Manager a utilizar (por defecto latest)"
+  type        = string
+  default     = "latest"
 }
 
 variable "create_frontend_lb" {

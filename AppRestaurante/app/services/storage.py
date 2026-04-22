@@ -131,7 +131,14 @@ def resolve_object_name(image_ref: str) -> str | None:
         return None
 
     if image_ref.startswith(("http://", "https://", "gs://", "s3://")):
-        return _extract_object_name_from_url(image_ref)
+        object_name = _extract_object_name_from_url(image_ref)
+        if object_name:
+            return object_name
+
+        parsed = urlparse(image_ref)
+        if parsed.path.startswith("/media/"):
+            return parsed.path[len("/media/"):]
+        return None
 
     if image_ref.startswith("/media/"):
         return image_ref[len("/media/"):]

@@ -21,12 +21,12 @@ def _get_image_pool(request: Request) -> ImageWorkerPool:
 
 
 def _to_absolute_media_url(request: Request, image_ref: str) -> str:
+    del request
     object_name = resolve_object_name(image_ref)
     if not object_name:
         return image_ref
-
-    proxy_path = build_proxy_url(object_name).lstrip("/")
-    return str(request.base_url) + proxy_path
+    # Use relative paths to avoid mixed-content issues behind HTTPS load balancers.
+    return build_proxy_url(object_name)
 
 
 @router.post("/image")

@@ -6,11 +6,25 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 def _get_database_url() -> str:
     url = os.getenv("DATABASE_URL")
-    if not url:
-        raise RuntimeError(
-            "DATABASE_URL is not set. Set it via your local .env file or GitHub Actions secrets/vars."
+    if url:
+        return url
+
+    db_user = os.getenv("DB_USER")
+    db_password = os.getenv("DB_PASSWORD")
+    db_name = os.getenv("DB_NAME")
+    cloud_sql_connection_name = os.getenv("CLOUD_SQL_CONNECTION_NAME")
+
+    if db_user and db_password and db_name and cloud_sql_connection_name:
+        return (
+            f"postgresql+psycopg2://{db_user}:{db_password}@/{db_name}"
+            f"?host=/cloudsql/{cloud_sql_connection_name}"
         )
-    return url
+
+    raise RuntimeError(
+        "DATABASE_URL is not set. Configure DATABASE_URL directly or provide DB_USER, DB_PASSWORD, "
+        "DB_NAME and CLOUD_SQL_CONNECTION_NAME."
+    )
+    
 
 
 def _build_engine():

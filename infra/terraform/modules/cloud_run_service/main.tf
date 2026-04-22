@@ -45,12 +45,33 @@ resource "google_cloud_run_v2_service" "this" {
           value = env.value
         }
       }
+
+      dynamic "env" {
+        for_each = var.secret_env_vars
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret
+              version = try(env.value.version, "latest")
+            }
+          }
+        }
+      }
     }
   }
 
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
+  }
+
+  lifecycle {
+    ignore_changes = [
+      client,
+      client_version,
+      template[0].labels,
+    ]
   }
 }
 

@@ -15,5 +15,9 @@ output "https_forwarding_rule_name" {
 }
 
 output "managed_certificate_name" {
-  value = var.enable_https ? google_compute_managed_ssl_certificate.this[0].name : null
+  value = var.enable_https && length(var.managed_certificate_domains) > 0 ? google_compute_managed_ssl_certificate.this[0].name : null
+}
+
+output "self_signed_certificate_name" {
+  value = var.enable_https && length(var.managed_certificate_domains) == 0 ? google_compute_ssl_certificate.self_signed[0].name : null
 }
