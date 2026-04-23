@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/google"
       version = ">= 5.20.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = ">= 2.4.0"
+    }
     tls = {
       source  = "hashicorp/tls"
       version = ">= 4.0.0"

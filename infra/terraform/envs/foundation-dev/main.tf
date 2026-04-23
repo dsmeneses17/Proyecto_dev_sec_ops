@@ -31,6 +31,22 @@ locals {
     app = "livemenu"
     env = var.environment
   }
+
+  rotate_secret_source_dir = "${path.module}/functions/rotate_secret"
+}
+
+data "archive_file" "rotate_secret_zip" {
+  type        = "zip"
+  source_dir  = local.rotate_secret_source_dir
+  output_path = "${path.module}/.terraform/rotate-secret.zip"
+}
+
+resource "google_storage_bucket_object" "rotate_secret_source" {
+  name   = "functions/rotate-secret-${data.archive_file.rotate_secret_zip.output_md5}.zip"
+  bucket = local.images_bucket_name
+  source = data.archive_file.rotate_secret_zip.output_path
+
+  depends_on = [module.storage]
 }
 
 resource "google_project_service" "required" {
@@ -41,6 +57,7 @@ resource "google_project_service" "required" {
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
     "cloudfunctions.googleapis.com",
+    "eventarc.googleapis.com",
     "cloudbuild.googleapis.com",
     "pubsub.googleapis.com",
     "sqladmin.googleapis.com",
@@ -79,46 +96,52 @@ resource "google_service_account" "frontend" {
   display_name = "LiveMenu Frontend ${var.environment}"
 }
 
-resource "google_cloudfunctions_function" "rotate_secret" {
-  count = var.manage_rotate_secret_function ? 1 : 0
+resource "google_cloudfunctions2_function" "rotate_secret" {
+  name     = "rotate-secret"
+  project  = var.project_id
+  location = var.region
 
-  name                  = "rotate-secret"
-  project               = var.project_id
-  region                = var.region
-  runtime               = "python311"
-  available_memory_mb   = 256
-  entry_point           = "rotate_secret"
-  service_account_email = "${var.project_id}@appspot.gserviceaccount.com"
-  ingress_settings      = "ALLOW_ALL"
-  max_instances         = 3000
-  timeout               = 60
-
-  source_archive_bucket = "uploads-745023658003.us-central1.cloudfunctions.appspot.com"
-  source_archive_object = "2f0f3352-3114-4813-be22-26043da06431.zip"
-
-  event_trigger {
-    event_type = "google.pubsub.topic.publish"
-    resource   = "projects/${var.project_id}/topics/secret-rotation-topic"
-    failure_policy {
-      retry = false
+  build_config {
+    runtime     = "python311"
+    entry_point = "rotate_secret"
+    source {
+      storage_source {
+        bucket = local.images_bucket_name
+        object = google_storage_bucket_object.rotate_secret_source.name
+      }
     }
   }
 
-  labels = {
-    deployment-tool = "cli-gcloud"
+  service_config {
+    available_memory      = "256M"
+    max_instance_count    = 10
+    timeout_seconds       = 60
+    ingress_settings      = "ALLOW_ALL"
+    service_account_email = "${var.project_id}@appspot.gserviceaccount.com"
+
+    environment_variables = {
+      PROJECT_ID              = var.project_id
+      REGION                  = var.region
+      JWT_SECRET_NAME         = var.jwt_secret_name
+      DB_SECRET_NAME          = var.db_password_secret_name
+      CLOUD_SQL_INSTANCE      = var.create_cloud_sql ? module.cloud_sql[0].instance_name : ""
+      CLOUD_SQL_DB_USER       = var.db_user
+      BACKEND_SERVICE_NAME    = var.create_cloud_run ? module.backend[0].name : ""
+      FRONTEND_SERVICE_NAME   = var.create_cloud_run ? module.frontend[0].name : ""
+      FORCE_CLOUD_RUN_REFRESH = var.create_cloud_run ? "true" : "false"
+      ROTATE_DB_USER_PASSWORD = var.create_cloud_sql ? "true" : "false"
+    }
+  }
+
+  event_trigger {
+    trigger_region = var.region
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = "projects/${var.project_id}/topics/secret-rotation-topic"
+    retry_policy   = "RETRY_POLICY_DO_NOT_RETRY"
   }
 
   depends_on = [google_project_service.required]
-
-  lifecycle {
-    ignore_changes = [
-      labels,
-      source_archive_bucket,
-      source_archive_object,
-    ]
-  }
 }
-
 
 import {
   to = google_project_service.required["cloudbuild.googleapis.com"]
@@ -192,6 +215,40 @@ resource "google_service_account" "worker" {
 
   account_id   = "lm-worker-${var.environment}"
   display_name = "LiveMenu Worker ${var.environment}"
+}
+
+resource "google_project_iam_member" "rotate_secret_sa_secret_admin" {
+  project = var.project_id
+  role    = "roles/secretmanager.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "rotate_secret_sa_cloudsql_admin" {
+  project = var.project_id
+  role    = "roles/cloudsql.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "rotate_secret_sa_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "rotate_secret_backend_sa_user" {
+  count = var.create_cloud_run ? 1 : 0
+
+  service_account_id = google_service_account.backend[0].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "rotate_secret_frontend_sa_user" {
+  count = var.create_cloud_run ? 1 : 0
+
+  service_account_id = google_service_account.frontend[0].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
 module "storage" {
