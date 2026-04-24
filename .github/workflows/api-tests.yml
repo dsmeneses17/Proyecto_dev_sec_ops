@@ -317,3 +317,104 @@ jobs:
       - name: Shutdown app
         if: always()
         run: docker compose down -v
+
+  build-and-scan-images:
+    name: Build + Trivy scan (block High/Critical)
+    runs-on: ubuntu-latest
+    needs:
+      - ruff-lint
+      - apirestaurante-pytest
+      - apprestaurante-pytest
+      - playwright-e2e
+      - lighthouse-audit
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - image_name: backend-api
+            dockerfile: ApiRestaurante/Dockerfile
+            context: ApiRestaurante
+          - image_name: frontend-api
+            dockerfile: AppRestaurante/Dockerfile
+            context: AppRestaurante
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}
+
+      - name: Security gate - Trivy (HIGH,CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: image
+          image-ref: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          format: table
+
+  deploy-cloud-run:
+    name: Deploy to Cloud Run (gated)
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-scan-images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build-and-scan-images.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - image_name: backend-api
+            service_var: CLOUD_RUN_BACKEND_SERVICE
+          - image_name: frontend-api
+            service_var: CLOUD_RUN_FRONTEND_SERVICE
+
+    steps:
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve Cloud Run service name
+        id: service_name
+        shell: bash
+        run: |
+          if [ "${{ matrix.service_var }}" = "CLOUD_RUN_BACKEND_SERVICE" ]; then
+            echo "name=${{ vars.CLOUD_RUN_BACKEND_SERVICE }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${{ vars.CLOUD_RUN_FRONTEND_SERVICE }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy scanned image to Cloud Run
+        run: |
+          gcloud run deploy "${{ steps.service_name.outputs.name }}" \
+            --image "${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --platform managed \
+            --quiet
