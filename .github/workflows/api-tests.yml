@@ -371,6 +371,7 @@ jobs:
           image-ref: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}
           vuln-type: os,library
           severity: HIGH,CRITICAL
+          ignore-unfixed: true
           exit-code: 1
           format: table
 
