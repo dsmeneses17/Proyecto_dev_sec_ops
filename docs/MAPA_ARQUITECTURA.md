@@ -1,5 +1,67 @@
 # Mapa de Arquitectura — Proyecto Restaurante
 
+## 0) Diagrama de arquitectura actualizada en GCP
+
+La solucion desplegada en GCP se soporta en Cloud Run para frontend/backend, con entrada por HTTPS Load Balancer, proteccion WAF con Cloud Armor y datos en Cloud SQL + Cloud Storage.
+
+```mermaid
+flowchart TB
+    U[Usuarios Web/Mobile] --> GLB[Global HTTPS Load Balancer\nHTTP 80 redirige a HTTPS 443]
+        GLB --> WAF[Cloud Armor\nOWASP + Rate limiting]
+        WAF --> NEG[Serverless NEG]
+        NEG --> FE[Cloud Run Frontend\nIngress: Internal and LB]
+
+        FE -->|Invocacion privada| BE[Cloud Run Backend\nFastAPI]
+
+        BE --> SQL[Cloud SQL PostgreSQL\nHA regional + backups]
+        BE --> SM[Secret Manager\nJWT y DB_PASSWORD]
+        BE --> GCS[Cloud Storage\nBucket de imagenes con versionado]
+        FE --> GCS
+
+        subgraph CI_CD[Entrega continua]
+            GH[GitHub Actions]
+            AR[Artifact Registry]
+            SCAN[Container scanning]
+        end
+
+        GH --> AR
+        AR --> SCAN
+        AR --> FE
+        AR --> BE
+
+        subgraph OPS[Operacion y observabilidad]
+            LOG[Cloud Logging]
+            MON[Cloud Monitoring y alertas]
+            AUD[Cloud Audit Logs]
+        end
+
+        FE --> LOG
+        BE --> LOG
+        SQL --> LOG
+        LOG --> MON
+        AUD --> MON
+
+        subgraph NET[VPC Foundation]
+            VPC[VPC + Subredes]
+            NAT[Cloud Router + Cloud NAT]
+        end
+
+        BE -. conectividad privada .-> VPC
+        SQL -. red privada administrada .-> VPC
+        VPC --> NAT
+```
+
+### Componentes implementados en Terraform
+
+- Compute: Cloud Run frontend y backend.
+- Perimetro: Global HTTP(S) Load Balancer + Serverless NEG + Cloud Armor.
+- DNS: no implementado en el entorno actual (`create_cloud_dns=false`).
+- Datos: Cloud SQL for PostgreSQL en modo regional (HA).
+- Storage: bucket de imagenes en Cloud Storage con versionamiento.
+- Seguridad: Secret Manager + cuentas de servicio con IAM de minimo privilegio.
+- Red: VPC, subredes, Cloud Router y Cloud NAT.
+- Entrega: Artifact Registry como registro de imagenes para despliegues desde CI.
+
 ## 1) Vista general completa
 
 La solución está organizada como una arquitectura web + API desacoplada, desplegada en contenedores y protegida con HTTPS.
