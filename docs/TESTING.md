@@ -1,6 +1,6 @@
 # 📋 Documentación Completa de Pruebas — Proyecto Restaurante
 
-> **Última actualización:** Febrero 2026  
+> **Última actualización:** Abril 2026  
 > **Repositorio:** `dsmeneses17/Proyecto_dev_sec_ops`
 
 ---
@@ -99,7 +99,8 @@ Restaurante/
 │       └── crud.spec.ts                       # CRUD completo (categorías + platos)
 │
 └── .github/workflows/
-    └── api-tests.yml                          # Pipeline CI con 3 jobs
+   ├── api-tests.yml                          # Pipeline de app (5 jobs)
+   └── terraform-infra.yml                    # Pipeline IaC (plan/scan/apply)
 ```
 
 ---
@@ -411,7 +412,7 @@ Implementa un polling con timeout de 30s que espera hasta que el navegador salga
 
 | Parámetro | Valor | Nota |
 |---|---|---|
-| `baseURL` | `E2E_BASE_URL` o `http://localhost:8000` | Configurable por variable de entorno |
+| `baseURL` | `E2E_BASE_URL` o `https://localhost` | Configurable por variable de entorno |
 | `timeout` | 60s | Timeout global por test |
 | `expect.timeout` | 10s | Timeout para assertions |
 | `retries` | 2 en CI, 0 en local | Reintentos automáticos en CI |
@@ -428,12 +429,17 @@ Implementa un polling con timeout de 30s que espera hasta que el navegador salga
 ### 5.1 Workflow: `api-tests.yml`
 
 **Triggers:**
-- `push` a branches: `main`
+- `push` a branches: `main`, `secrets-managing-avoid-paste`
 - `pull_request` (cualquier branch)
+- `workflow_dispatch`
 
 ### 5.2 Jobs del Pipeline
 
 ```
+┌──────────────────────────────┐
+│  ruff-lint                   │  ← Lint Python (RNF-06)
+└──────────────────────────────┘
+
 ┌──────────────────────────────┐
 │  apirestaurante-pytest       │  ← Servicios + Repos + Contrato API
 │  (Postgres service container)│
@@ -448,9 +454,13 @@ Implementa un polling con timeout de 30s que espera hasta que el navegador salga
 │  playwright-e2e              │  ← E2E con Docker Compose completo
 │  (docker compose up)         │
 └──────────────────────────────┘
+
+┌──────────────────────────────┐
+│  lighthouse-audit            │  ← Auditoría RNF-09
+└──────────────────────────────┘
 ```
 
-Los tres jobs se ejecutan **en paralelo**.
+Los jobs se ejecutan de acuerdo con las dependencias definidas en el workflow.
 
 #### Job 1: `apirestaurante-pytest`
 
@@ -482,12 +492,22 @@ Los tres jobs se ejecutan **en paralelo**.
 | Install browsers | `npx playwright install --with-deps` |
 | Build DATABASE_URL | URL con host `postgres_db` (nombre del servicio Docker) |
 | Boot app | `docker compose up -d --build` |
-| Wait for frontend | Polling HTTP hasta que `http://localhost:8000` responda con status < 500 (timeout: 120s) |
+| Wait for frontend | Polling HTTPS hasta que `https://localhost/` responda con status < 500 (timeout: 120s) |
 | Diagnostics | Validación exhaustiva de rutas, auth y logs (ejecuta siempre) |
 | Run Playwright tests | `npm run test:ci` |
 | Upload report | Artefacto `playwright-report` con screenshots, videos y trazas |
 | Dump logs on failure | Logs de Docker Compose si falla algún test |
 | Shutdown | `docker compose down -v` |
+
+#### Job 4: `lighthouse-audit`
+
+| Paso | Descripción |
+|---|---|
+| Node.js 20 | Setup del runtime |
+| Install LHCI | `npm install -g @lhci/cli` |
+| Boot app | Levanta stack con Docker Compose |
+| Run LHCI | Ejecuta `lhci autorun --config=lighthouserc.js` |
+| Upload report | Sube reportes Lighthouse como artifacts |
 
 ### 5.3 Gestión de Secretos
 
@@ -563,7 +583,7 @@ npm ci
 npx playwright install --with-deps
 
 # Ejecutar tests
-E2E_BASE_URL=http://localhost:8000 npx playwright test
+E2E_BASE_URL=https://localhost npx playwright test
 
 # Con interfaz gráfica
 npx playwright test --headed

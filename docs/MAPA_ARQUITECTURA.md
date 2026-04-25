@@ -2,7 +2,9 @@
 
 ## 0) Diagrama de arquitectura actualizada en GCP
 
-La solucion desplegada en GCP se soporta en Cloud Run para frontend/backend, con entrada por HTTPS Load Balancer, proteccion WAF con Cloud Armor y datos en Cloud SQL + Cloud Storage.
+La arquitectura objetivo en GCP se soporta en Cloud Run para frontend/backend, con entrada por HTTPS Load Balancer, proteccion WAF con Cloud Armor y datos en Cloud SQL + Cloud Storage.
+
+En el entorno `foundation-dev` actual, Terraform mantiene la base de red y seguridad (`create_frontend_lb=false`, `create_cloud_dns=false`, `create_waf_policy=true`) como despliegue por fases.
 
 ```mermaid
 flowchart TB
@@ -61,6 +63,7 @@ flowchart TB
 - Seguridad: Secret Manager + cuentas de servicio con IAM de minimo privilegio.
 - Red: VPC, subredes, Cloud Router y Cloud NAT.
 - Entrega: Artifact Registry como registro de imagenes para despliegues desde CI.
+- Estado `foundation-dev`: despliegue por fases con LB frontend y DNS deshabilitados por configuracion.
 
 ## 1) Vista general completa
 
@@ -72,7 +75,7 @@ Componentes principales:
 - `frontend_api` (`AppRestaurante`): aplicación web FastAPI con renderizado de plantillas Jinja2.
 - `backend_api` (`ApiRestaurante`): API REST FastAPI con reglas de negocio y acceso a datos.
 - `postgres_db` (PostgreSQL): persistencia transaccional principal.
-- `S3/Object Storage` (integración): almacenamiento de imágenes de menú.
+- `Object Storage` (integración S3/GCS): almacenamiento de imágenes de menú.
 
 ---
 
@@ -88,7 +91,7 @@ flowchart TB
 
         FE -->|HTTP interno| BE
         BE --> DB[(postgres_db\nPostgreSQL 15)]
-        FE --> S3[(AWS S3 / Object Storage)]
+        FE --> OBJ[(Object Storage S3/GCS)]
     end
 ```
 
@@ -129,7 +132,7 @@ flowchart LR
 Estructura de aplicación web con integración backend:
 
 - **Routers web**: navegación, formularios y acciones de usuario.
-- **Services**: integración con API backend y almacenamiento S3.
+- **Services**: integración con API backend y almacenamiento de objetos (S3/GCS).
 - **Core**: configuración y seguridad.
 - **UI**: plantillas Jinja2, archivos estáticos, helpers de presentación.
 - **Middlewares**: protección por JWT/cookie y refuerzo HTTPS.
@@ -151,7 +154,7 @@ La arquitectura incorpora controles de seguridad en varios niveles:
 ## 5) Datos y almacenamiento
 
 - **PostgreSQL**: almacena entidades de dominio (usuarios, restaurantes, categorías, platos).
-- **Object Storage (S3)**: almacena archivos binarios (imágenes), evitando sobrecargar la base relacional.
+- **Object Storage (S3/GCS)**: almacena archivos binarios (imágenes), evitando sobrecargar la base relacional.
 - **Cache de menú**: mecanismo híbrido con memoria y soporte Redis opcional para optimizar lecturas públicas.
 
 ---
@@ -197,7 +200,7 @@ flowchart LR
 
 1. Cliente consulta menú público vía frontend/backend.
 2. Backend recupera datos de dominio.
-3. Imágenes se sirven desde S3 (URL pública o resuelta por frontend).
+3. Imágenes se sirven desde object storage (S3/GCS, URL pública o resuelta por frontend).
 
 ---
 
@@ -234,7 +237,8 @@ Proyecto_dev_sec_ops/
 │  ├─ tests/
 │  └─ playwright.config.ts
 └─ .github/workflows/
-   └─ api-tests.yml
+    ├─ api-tests.yml
+    └─ terraform-infra.yml
 ```
 
 ---

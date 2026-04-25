@@ -1,7 +1,9 @@
 # 📘 Documentación de la API — Restaurante Digital
 
-> **Base URL**: `http://localhost:5001`  
-> **Framework**: FastAPI 0.128.0 · Python 3.11  
+> **Base URL (local, via gateway HTTPS)**: `https://localhost/backend-api`  
+> **Base URL (interna en red Docker)**: `http://backend_api:5000`  
+> **Base URL (GCP)**: `https://<lb-domain-o-ip>/backend-api`  
+> **Framework**: FastAPI · Python 3.11+  
 > **Autenticación**: Bearer Token (JWT)  
 > **Rate Limit**: 100 peticiones/minuto por IP (RNF-04)
 
@@ -54,7 +56,7 @@ Prefijo: **`/api/v1/auth`** · Tag: `auth`
 }
 ```
 
-**Errores**: `401` credenciales inválidas.
+**Errores**: `404` usuario no encontrado · `401` credenciales inválidas.
 
 ---
 
@@ -94,7 +96,7 @@ Prefijo: **`/api/v1/auth`** · Tag: `auth`
 
 ```json
 {
-  "message": "Usuario creado exitosamente",
+  "message": "Usuario registrado",
   "user_id": 1,
   "rol": "cliente"
 }
@@ -131,7 +133,7 @@ Prefijo: **`/api/v1/auth`** · Tag: `auth`
 
 ```json
 {
-  "message": "Propietario y restaurante creados exitosamente",
+  "message": "Registro completado",
   "user_id": 1,
   "restaurant_id": "uuid-string",
   "restaurant_slug": "mi-restaurante"
@@ -148,22 +150,17 @@ Prefijo: **`/api/v1/auth`** · Tag: `auth`
 |-------|-------|
 | **Método** | `POST` |
 | **Ruta** | `/api/v1/auth/refresh` |
-| **Auth** | ❌ No requiere (se envía refresh token en body) |
+| **Auth** | ❌ No requiere |
 
-**Request Body**:
+**Query Params**:
 
-```json
-{
-  "refresh_token": "string"
-}
-```
+- `refresh_token`: token de refresco (string)
 
 **Response** `200 OK`:
 
 ```json
 {
-  "access_token": "eyJhbGci...",
-  "token_type": "bearer"
+  "access_token": "eyJhbGci..."
 }
 ```
 

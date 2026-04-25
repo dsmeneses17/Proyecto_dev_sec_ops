@@ -16,7 +16,7 @@ queries) y obtienen un score **≥ 90** en las cuatro categorías de Google Ligh
 | `/menu` (Menú público index) | **99** | **100** | **100** | **100** |
 
 > Auditoría ejecutada con `npx lighthouse --preset=desktop` (Lighthouse 13.x)
-> sobre `http://localhost:8000` (docker compose, servidor warm).
+> sobre `https://localhost` (docker compose, servidor warm, certificado local).
 
 ---
 
@@ -92,12 +92,13 @@ Se agregó un job `lighthouse-audit` en `.github/workflows/api-tests.yml` que:
 docker compose up -d
 
 # 2. Warm-up
-curl -sS http://localhost:8000/api/v1/auth/login > /dev/null
+curl -k -sS https://localhost/api/v1/auth/login > /dev/null
 
 # 3. Ejecutar auditoría
-npx lighthouse http://localhost:8000/api/v1/auth/login \
+npx lighthouse https://localhost/api/v1/auth/login \
   --preset=desktop \
   --only-categories=performance,accessibility,best-practices,seo \
+  --chrome-flags="--ignore-certificate-errors" \
   --skip-audits=is-on-https,redirects-http \
   --output=json --output-path=./lh-report.json
 
