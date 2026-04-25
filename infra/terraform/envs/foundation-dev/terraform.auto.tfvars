@@ -1,3 +1,7 @@
+create_cloud_router_nat = true
+create_cloud_dns = false
+dns_domain       = ""
+
 project_id  = "proyecto-devsecops-493813"
 region      = "us-central1"
 environment = "foundation-dev"
@@ -43,7 +47,3 @@ subnets = {
     description = "Reserva para Serverless VPC Access connector"
   }
 }
-
-create_cloud_router_nat = true
-create_cloud_dns = false
-dns_domain       = ""
