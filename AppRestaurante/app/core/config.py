@@ -1,4 +1,3 @@
-from typing import Optional
 import os
 
 
@@ -14,24 +13,24 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES = 30
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://backend_api:5000/api/v1/")
 
-    ERROR_NOHAYRESTAURANTE :str = "No se encontró restaurante para este usuario"
+    ERROR_NOHAYRESTAURANTE: str = "No se encontró restaurante para este usuario"
 
-    #roles
-    ROL_ADMIN:str="admin"
+    # roles
+    ROL_ADMIN: str = "admin"
 
     STORAGE_PROVIDER: str = os.getenv("STORAGE_PROVIDER", "s3").strip().lower()
 
     S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "")
     S3_REGION: str = os.getenv("S3_REGION", "us-east-1")
-    S3_ENDPOINT_URL: Optional[str] = os.getenv("S3_ENDPOINT_URL")
-    S3_PUBLIC_BASE_URL: Optional[str] = os.getenv("S3_PUBLIC_BASE_URL")
+    S3_ENDPOINT_URL: str | None = os.getenv("S3_ENDPOINT_URL")
+    S3_PUBLIC_BASE_URL: str | None = os.getenv("S3_PUBLIC_BASE_URL")
     S3_FORCE_PATH_STYLE: bool = os.getenv("S3_FORCE_PATH_STYLE", "false").lower() == "true"
-    AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY: Optional[str] = os.getenv("AWS_SECRET_ACCESS_KEY")
+    AWS_ACCESS_KEY_ID: str | None = os.getenv("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: str | None = os.getenv("AWS_SECRET_ACCESS_KEY")
 
-    GCP_PROJECT_ID: Optional[str] = os.getenv("GCP_PROJECT_ID")
+    GCP_PROJECT_ID: str | None = os.getenv("GCP_PROJECT_ID")
     GCS_BUCKET_NAME: str = os.getenv("GCS_BUCKET_NAME", "")
-    GCS_PUBLIC_BASE_URL: Optional[str] = os.getenv("GCS_PUBLIC_BASE_URL")
+    GCS_PUBLIC_BASE_URL: str | None = os.getenv("GCS_PUBLIC_BASE_URL")
 
     IMAGE_WORKERS: int = int(os.getenv("IMAGE_WORKERS", "2"))
     IMAGE_QUEUE_MAXSIZE: int = int(os.getenv("IMAGE_QUEUE_MAXSIZE", "100"))

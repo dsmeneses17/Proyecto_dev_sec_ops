@@ -81,6 +81,7 @@ def mostrar_dashboard_restaurante(request: Request):
         {"restaurant": restaurant_data, **get_template_context(request)},
     )
 
+
 @router.get("/restaurant_form", response_class=HTMLResponse)
 def restaurant_form(request: Request):
     token = request.cookies.get("access_token")
@@ -110,6 +111,7 @@ def restaurant_form(request: Request):
         {"restaurant": restaurant_data, **get_template_context(request)},
     )
 
+
 @router.post("/restaurant", response_model=RestaurantOut)
 def create_restaurant(
     request: Request,
@@ -120,7 +122,7 @@ def create_restaurant(
     descripcion: str = Form(None),
     telefono: str = Form(None),
     direccion: str = Form(None),
-    horarios: str = Form("{}")
+    horarios: str = Form("{}"),
 ):
     token = request.cookies.get("access_token")
     restaurant_id = _safe_restaurant_cookie_value(request.cookies.get("restaurant_id"))
@@ -132,7 +134,6 @@ def create_restaurant(
         raise HTTPException(status_code=400, detail="Debe cargar el logo del restaurante")
 
     horarios_dict = _parse_horarios(horarios)
-
 
     try:
         restaurant = RestaurantCreate(
@@ -147,7 +148,6 @@ def create_restaurant(
         )
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
 
     resultado = create_or_update_restaurant(restaurant, token)
     if "error" in resultado:
@@ -192,7 +192,6 @@ def eliminar_restaurante(request: Request):
     redirect.delete_cookie("restaurant_id")
     redirect.delete_cookie("restaurant_slug")
     return redirect
-
 
 
 @router.post("/send")

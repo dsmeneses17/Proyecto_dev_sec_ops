@@ -1,4 +1,5 @@
 """Service for handling QR color updates."""
+
 import logging
 import re
 

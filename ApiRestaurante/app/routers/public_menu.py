@@ -23,11 +23,7 @@ async def list_public_restaurants(db: Session = Depends(get_db)):
     Kept intentionally small to avoid leaking internal data.
     """
 
-    restaurants = (
-        db.query(Restaurant)
-        .order_by(Restaurant.nombre.asc())
-        .all()
-    )
+    restaurants = db.query(Restaurant).order_by(Restaurant.nombre.asc()).all()
 
     return [
         {
@@ -38,6 +34,7 @@ async def list_public_restaurants(db: Session = Depends(get_db)):
         }
         for r in restaurants
     ]
+
 
 @router.get("/{slug}")
 async def get_public_menu(slug: str, db: Session = Depends(get_db)):
@@ -68,16 +65,14 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
         pass
 
     # Layer 3: Query database
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.slug == slug
-    ).first()
+    restaurant = db.query(Restaurant).filter(Restaurant.slug == slug).first()
 
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
 
-    categorias = db.query(Category).filter(
-        Category.restaurante_id == restaurant.id
-    ).order_by(Category.posicion.asc()).all()
+    categorias = (
+        db.query(Category).filter(Category.restaurante_id == restaurant.id).order_by(Category.posicion.asc()).all()
+    )
 
     response = {
         "restaurant": {
@@ -88,36 +83,41 @@ async def get_public_menu(slug: str, db: Session = Depends(get_db)):
             "qr_color_fg": restaurant.qr_color_fg,
             "qr_color_bg": restaurant.qr_color_bg,
         },
-        "categorias": []
+        "categorias": [],
     }
 
     for cat in categorias:
-        platos = db.query(Dish).filter(
-            Dish.categoria_id == cat.id,
-            Dish.disponible == True,
-            Dish.eliminado_en == None
-        ).order_by(Dish.posicion.asc()).all()
+        platos = (
+            db.query(Dish)
+            .filter(Dish.categoria_id == cat.id, Dish.disponible == True, Dish.eliminado_en == None)
+            .order_by(Dish.posicion.asc())
+            .all()
+        )
 
         if not platos:
             continue
 
-        response["categorias"].append({
-            "id": str(cat.id),
-            "nombre": cat.nombre,
-            "platos": [
-                {
-                    "id": str(p.id),
-                    "nombre": p.nombre,
-                    "descripcion": p.descripcion,
-                    "precio": float(p.precio) if isinstance(p.precio, Decimal) else p.precio,
-                    "precio_oferta": float(p.precio_oferta) if isinstance(p.precio_oferta, Decimal) else p.precio_oferta,
-                    "imagen_url": p.imagen_url,
-                    "destacado": p.destacado,
-                    "etiquetas": p.etiquetas,
-                }
-                for p in platos
-            ]
-        })
+        response["categorias"].append(
+            {
+                "id": str(cat.id),
+                "nombre": cat.nombre,
+                "platos": [
+                    {
+                        "id": str(p.id),
+                        "nombre": p.nombre,
+                        "descripcion": p.descripcion,
+                        "precio": float(p.precio) if isinstance(p.precio, Decimal) else p.precio,
+                        "precio_oferta": float(p.precio_oferta)
+                        if isinstance(p.precio_oferta, Decimal)
+                        else p.precio_oferta,
+                        "imagen_url": p.imagen_url,
+                        "destacado": p.destacado,
+                        "etiquetas": p.etiquetas,
+                    }
+                    for p in platos
+                ],
+            }
+        )
 
     # Store in caches
     memory_cache.set(cache_key, response)

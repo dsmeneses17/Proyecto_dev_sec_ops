@@ -5,6 +5,7 @@ from app.models.restaurant_model import RestaurantCreate
 # URL del backend
 BACKEND_URL = "http://backend:5000/api/v1/admin/restaurants"
 
+
 def enviar_restaurante(data: RestaurantCreate, token: str):
     """
     Envía los datos del restaurante al backend usando el token de autenticación.
@@ -14,7 +15,7 @@ def enviar_restaurante(data: RestaurantCreate, token: str):
 
     headers = {
         "Authorization": f"Bearer {token}",  # Muy importante usar 'Bearer '
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     payload = data.model_dump()  # o data.dict() según tu versión de Pydantic

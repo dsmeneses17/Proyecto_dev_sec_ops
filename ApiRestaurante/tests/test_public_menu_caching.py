@@ -1,6 +1,5 @@
 """Integration tests for public menu caching."""
 
-
 import pytest
 from fastapi.testclient import TestClient
 

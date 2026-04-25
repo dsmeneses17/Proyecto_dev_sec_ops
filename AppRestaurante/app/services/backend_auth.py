@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
@@ -9,14 +9,13 @@ from google.oauth2 import id_token
 
 from app.core.config import settings
 
-
 logger = logging.getLogger(__name__)
 
-_TOKEN_CACHE: Dict[str, Any] = {"token": None, "expires_at": 0.0}
+_TOKEN_CACHE: dict[str, Any] = {"token": None, "expires_at": 0.0}
 
 
 def _sanitize_token(token: str) -> str:
-    return token.strip().strip("\"").strip("'")
+    return token.strip().strip('"').strip("'")
 
 
 def _backend_audience() -> str:
@@ -26,7 +25,7 @@ def _backend_audience() -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-def _get_backend_id_token() -> Optional[str]:
+def _get_backend_id_token() -> str | None:
     now = time.time()
     token = _TOKEN_CACHE.get("token")
     expires_at = float(_TOKEN_CACHE.get("expires_at") or 0.0)
@@ -44,8 +43,8 @@ def _get_backend_id_token() -> Optional[str]:
         return None
 
 
-def build_backend_headers(user_token: Optional[str] = None, content_type_json: bool = False) -> Dict[str, str]:
-    headers: Dict[str, str] = {}
+def build_backend_headers(user_token: str | None = None, content_type_json: bool = False) -> dict[str, str]:
+    headers: dict[str, str] = {}
 
     backend_token = _get_backend_id_token()
     if backend_token:
@@ -61,7 +60,7 @@ def build_backend_headers(user_token: Optional[str] = None, content_type_json: b
     return headers
 
 
-def request_backend(method: str, url: str, *, user_token: Optional[str] = None, timeout: int = 10, **kwargs):
+def request_backend(method: str, url: str, *, user_token: str | None = None, timeout: int = 10, **kwargs):
     headers = kwargs.pop("headers", {}) or {}
     merged = {**build_backend_headers(user_token=user_token), **headers}
     return requests.request(method=method, url=url, headers=merged, timeout=timeout, **kwargs)

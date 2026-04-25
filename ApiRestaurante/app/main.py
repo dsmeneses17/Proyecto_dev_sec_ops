@@ -20,7 +20,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Reject requests that exceed 100 req/min per client IP."""
 
     async def dispatch(self, request: Request, call_next):
-        client_ip = (request.client.host if request.client else "127.0.0.1")
+        client_ip = request.client.host if request.client else "127.0.0.1"
         key = f"rate_limit:{client_ip}"
 
         if not _strategy.hit(_rate, key):

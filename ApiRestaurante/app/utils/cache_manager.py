@@ -38,4 +38,3 @@ def invalidate_all_menu_caches() -> None:
     except RedisError:
         # Redis not available, but in-memory caches are cleared
         pass
-

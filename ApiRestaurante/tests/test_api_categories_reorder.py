@@ -6,27 +6,12 @@ def test_reorder_categories_success(client, make_user, make_restaurant, make_cat
     admin = make_user(usuario="admin_reorder", rol="admin")
     restaurant = make_restaurant(admin_id=admin.id)
 
-    cat1 = make_category(
-        restaurante_id=restaurant.id,
-        nombre="Cat 1",
-        posicion=1
-    )
-    cat2 = make_category(
-        restaurante_id=restaurant.id,
-        nombre="Cat 2",
-        posicion=2
-    )
-    cat3 = make_category(
-        restaurante_id=restaurant.id,
-        nombre="Cat 3",
-        posicion=3
-    )
+    cat1 = make_category(restaurante_id=restaurant.id, nombre="Cat 1", posicion=1)
+    cat2 = make_category(restaurante_id=restaurant.id, nombre="Cat 2", posicion=2)
+    cat3 = make_category(restaurante_id=restaurant.id, nombre="Cat 3", posicion=3)
 
     # Login as admin
-    login_resp = client.post(
-        "/api/v1/auth/login",
-        json={"usuario": admin.usuario, "password": "password123"}
-    )
+    login_resp = client.post("/api/v1/auth/login", json={"usuario": admin.usuario, "password": "password123"})
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
 
@@ -40,7 +25,7 @@ def test_reorder_categories_success(client, make_user, make_restaurant, make_cat
                 {"id": str(cat3.id), "posicion": 1},
             ]
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
     assert resp.json()["message"] == "Categorías reordenadas exitosamente"
@@ -59,10 +44,7 @@ def test_reorder_categories_invalid_id(client, make_user, make_restaurant, make_
     restaurant = make_restaurant(admin_id=admin.id)
     make_category(restaurante_id=restaurant.id, nombre="Cat", posicion=1)
 
-    login_resp = client.post(
-        "/api/v1/auth/login",
-        json={"usuario": admin.usuario, "password": "password123"}
-    )
+    login_resp = client.post("/api/v1/auth/login", json={"usuario": admin.usuario, "password": "password123"})
     token = login_resp.json()["access_token"]
 
     # Try to reorder with invalid ID
@@ -73,7 +55,7 @@ def test_reorder_categories_invalid_id(client, make_user, make_restaurant, make_
                 {"id": "00000000-0000-0000-0000-000000000000", "posicion": 1},
             ]
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 404
 
@@ -84,10 +66,7 @@ def test_reorder_categories_missing_posicion(client, make_user, make_restaurant,
     restaurant = make_restaurant(admin_id=admin.id)
     cat = make_category(restaurante_id=restaurant.id, nombre="Cat", posicion=1)
 
-    login_resp = client.post(
-        "/api/v1/auth/login",
-        json={"usuario": admin.usuario, "password": "password123"}
-    )
+    login_resp = client.post("/api/v1/auth/login", json={"usuario": admin.usuario, "password": "password123"})
     token = login_resp.json()["access_token"]
 
     # Try to reorder with missing posición
@@ -98,7 +77,7 @@ def test_reorder_categories_missing_posicion(client, make_user, make_restaurant,
                 {"id": str(cat.id)},  # Missing posición
             ]
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 400
 
@@ -112,10 +91,7 @@ def test_reorder_categories_unauthorized_non_admin(client, make_user, make_resta
     # Create a non-admin user
     client_user = make_user(usuario="regular_user", rol="cliente")
 
-    login_resp = client.post(
-        "/api/v1/auth/login",
-        json={"usuario": client_user.usuario, "password": "password123"}
-    )
+    login_resp = client.post("/api/v1/auth/login", json={"usuario": client_user.usuario, "password": "password123"})
     token = login_resp.json()["access_token"]
 
     # Try to reorder categories as non-admin
@@ -126,6 +102,6 @@ def test_reorder_categories_unauthorized_non_admin(client, make_user, make_resta
                 {"id": str(cat.id), "posicion": 1},
             ]
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403

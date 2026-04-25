@@ -38,11 +38,14 @@ class DishBase(BaseModel):
 
         return unique_tags
 
+
 class DishCreate(DishBase):
     pass
 
+
 class DishUpdate(DishBase):
     pass
+
 
 class DishOut(DishBase):
     id: UUID

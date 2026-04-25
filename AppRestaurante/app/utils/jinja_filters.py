@@ -37,13 +37,13 @@ def from_json(value: Any) -> dict | None:
         repaired = repaired.replace("\r\n", "\n")
         repaired = repaired.replace("\t", " ")
 
-    # Heuristic repair: if a line ends with a quoted string value and the next
-    # non-empty line starts with a quoted key, add a trailing comma.
-    # Example to fix:
-    #   "lunes": "..."\n"martes": "..."
+        # Heuristic repair: if a line ends with a quoted string value and the next
+        # non-empty line starts with a quoted key, add a trailing comma.
+        # Example to fix:
+        #   "lunes": "..."\n"martes": "..."
         repaired = re.sub(
-            r'(\"\s*)\n(\s*\"[^\"]+\"\s*:)',
-            r'\1,\n\2',
+            r"(\"\s*)\n(\s*\"[^\"]+\"\s*:)",
+            r"\1,\n\2",
             repaired,
         )
         decoded = _try_load(repaired)

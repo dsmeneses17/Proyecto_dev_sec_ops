@@ -19,10 +19,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # app/core/security.py
 
-#Función temporal para debug
+
+# Función temporal para debug
 async def oauth2_scheme_debug(token: str = Depends(oauth2_scheme)):
     print("Token recibido en oauth2_scheme_debug:", token)
     return token
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     """Crea un JWT con datos del usuario"""
@@ -32,13 +34,13 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-
 def decode_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError as e:
         raise HTTPException(status_code=401, detail=f"Token inválido desde decode: {e}")
+
 
 def get_current_user_debug(authorization: str = Header(None)):
     print("Header Authorization recibido:", authorization)
@@ -49,7 +51,7 @@ def get_current_user_debug(authorization: str = Header(None)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Formato inválido")
 
-    token = authorization[len("Bearer "):].strip()
+    token = authorization[len("Bearer ") :].strip()
     print("Token extraído:", token)
 
     try:
@@ -63,8 +65,9 @@ def get_current_user_debug(authorization: str = Header(None)):
         "id": payload.get("sub"),
         "rol": payload.get("rol"),
         "email": payload.get("email"),
-        "restaurant_id": payload.get("restaurant_id")
+        "restaurant_id": payload.get("restaurant_id"),
     }
+
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     print("Token recibido en get_current_user:", token)
@@ -90,5 +93,5 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         "rol": role,
         "email": email,
         "restaurant_id": restaurant_id,
-        "restaurant_slug": restaurant_slug
+        "restaurant_slug": restaurant_slug,
     }

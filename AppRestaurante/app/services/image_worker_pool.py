@@ -1,8 +1,8 @@
 import asyncio
+import logging
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from io import BytesIO
-import logging
 from typing import Any
 from uuid import uuid4
 
@@ -10,7 +10,6 @@ from fastapi import HTTPException
 from PIL import Image, UnidentifiedImageError
 
 from app.services.storage import StorageConfigurationError, upload_bytes_to_object_storage
-
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +192,13 @@ class ImageWorkerPool:
         for variant_name, variant_content in processed_variants.items():
             filename = f"{image_id}_{variant_name}{OUTPUT_EXTENSION}"
             object_name = f"uploads/{job.user_id}/{job.target}/{filename}"
-            logger.debug("Uploading variant job_id=%s variant=%s object_name=%s size=%s", image_id, variant_name, object_name, len(variant_content))
+            logger.debug(
+                "Uploading variant job_id=%s variant=%s object_name=%s size=%s",
+                image_id,
+                variant_name,
+                object_name,
+                len(variant_content),
+            )
             try:
                 urls[variant_name] = await asyncio.to_thread(
                     upload_bytes_to_object_storage,

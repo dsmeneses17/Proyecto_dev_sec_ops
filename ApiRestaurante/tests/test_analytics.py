@@ -139,19 +139,23 @@ def test_stats_with_date_range_filters_breakdown(client, make_user, make_restaur
 
     # Insert views at different dates: 2 old (15 days ago) + 3 recent (today)
     for i in range(2):
-        db_session.add(MenuView(
-            restaurant_id=rest.id,
-            slug="test-resto",
-            source="menu",
-            viewed_at=today_start - timedelta(days=15, minutes=i),
-        ))
+        db_session.add(
+            MenuView(
+                restaurant_id=rest.id,
+                slug="test-resto",
+                source="menu",
+                viewed_at=today_start - timedelta(days=15, minutes=i),
+            )
+        )
     for i in range(3):
-        db_session.add(MenuView(
-            restaurant_id=rest.id,
-            slug="test-resto",
-            source="qr",
-            viewed_at=today_start + timedelta(minutes=i),
-        ))
+        db_session.add(
+            MenuView(
+                restaurant_id=rest.id,
+                slug="test-resto",
+                source="qr",
+                viewed_at=today_start + timedelta(minutes=i),
+            )
+        )
     db_session.commit()
 
     token = _login(client, "admin", "adminpass")
@@ -239,12 +243,14 @@ def test_stats_by_id_with_date_range(client, make_user, make_restaurant, db_sess
 
     now = datetime.now(UTC)
     for i in range(4):
-        db_session.add(MenuView(
-            restaurant_id=rest.id,
-            slug="test-resto",
-            source="direct",
-            viewed_at=now - timedelta(days=i),
-        ))
+        db_session.add(
+            MenuView(
+                restaurant_id=rest.id,
+                slug="test-resto",
+                source="direct",
+                viewed_at=now - timedelta(days=i),
+            )
+        )
     db_session.commit()
 
     token = _login(client, "admin", "adminpass")
@@ -264,6 +270,7 @@ def test_stats_by_id_with_date_range(client, make_user, make_restaurant, db_sess
 
 
 # ------------------------------------------------------------------ CU-08: ip_hash, referrer, hourly, device, csv
+
 
 def test_record_view_hashes_ip(client, make_user, make_restaurant):
     """The ip_hash field should be a SHA-256 hex digest, not the raw IP."""
@@ -367,12 +374,11 @@ def test_csv_export_with_date_filter(client, make_user, make_restaurant, db_sess
 
     now = datetime.now(UTC)
     # 2 old + 1 today
-    db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="menu",
-                            viewed_at=now - timedelta(days=20)))
-    db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="qr",
-                            viewed_at=now - timedelta(days=20)))
-    db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="direct",
-                            viewed_at=now))
+    db_session.add(
+        MenuView(restaurant_id=rest.id, slug="test-resto", source="menu", viewed_at=now - timedelta(days=20))
+    )
+    db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="qr", viewed_at=now - timedelta(days=20)))
+    db_session.add(MenuView(restaurant_id=rest.id, slug="test-resto", source="direct", viewed_at=now))
     db_session.commit()
 
     token = _login(client, "admin", "adminpass")

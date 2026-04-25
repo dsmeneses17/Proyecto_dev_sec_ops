@@ -16,15 +16,16 @@ class RestaurantBase(BaseModel):
     qr_color_bg: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")] = "#FFFFFF"  # QR background color
 
 
-
 class RestaurantCreate(RestaurantBase):
     id: UUID | None = None
 
+
 class RestaurantUpdate(RestaurantBase):
-    id: UUID   # <-- ahora UUID en lugar de str
+    id: UUID  # <-- ahora UUID en lugar de str
+
 
 class RestaurantOut(BaseModel):
-    id: UUID   # <-- ahora UUID en lugar de str
+    id: UUID  # <-- ahora UUID en lugar de str
     nombre: str
     descripcion: str | None = None
     telefono: str | None = None
@@ -38,7 +39,9 @@ class RestaurantOut(BaseModel):
     class Config:
         from_attributes = True  # en Pydantic v2 reemplaza orm_mode
 
+
 class RestaurantQRColorUpdate(BaseModel):
     """Schema for updating QR colors only."""
+
     qr_color_fg: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")] = "#000000"
     qr_color_bg: Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")] = "#FFFFFF"

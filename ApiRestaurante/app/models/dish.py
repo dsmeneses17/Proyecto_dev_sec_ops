@@ -9,7 +9,7 @@ from app.db import Base
 
 
 class Dish(Base):
-    __tablename__ = "dishes"   # en minúsculas y plural
+    __tablename__ = "dishes"  # en minúsculas y plural
 
     id = Column(pgUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     categoria_id = Column(pgUUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)

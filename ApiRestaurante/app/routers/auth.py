@@ -39,13 +39,15 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     restaurant_slug = restaurant.slug if restaurant else None
 
     # Crear token con info completa
-    access_token = create_access_token(data={
-        "sub": str(db_user.id),      # UUID del usuario como string
-        "rol": db_user.rol,
-        "email": db_user.email,
-        "restaurant_id": str(restaurant_id) if restaurant_id else None,
-    "restaurant_slug": str(restaurant_slug) if restaurant_slug else None
-    })
+    access_token = create_access_token(
+        data={
+            "sub": str(db_user.id),  # UUID del usuario como string
+            "rol": db_user.rol,
+            "email": db_user.email,
+            "restaurant_id": str(restaurant_id) if restaurant_id else None,
+            "restaurant_slug": str(restaurant_slug) if restaurant_slug else None,
+        }
+    )
     print(f"access token: {access_token}")
     # Retornar token y datos mínimos
     return {
@@ -54,17 +56,14 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
         "user_id": str(db_user.id),
         "rol": db_user.rol,
         "restaurant_id": str(restaurant_id) if restaurant_id else None,
-    "restaurant_slug": str(restaurant_slug) if restaurant_slug else None
+        "restaurant_slug": str(restaurant_slug) if restaurant_slug else None,
     }
-
 
 
 @router.get("/me")
 def read_users_me(current_user: dict = Depends(get_current_user)):
     # current_user ya viene decodificado desde el token
     return current_user
-
-
 
 
 @router.post("/register")
@@ -157,6 +156,7 @@ def register_owner(payload: dict, db: Session = Depends(get_db)):
         "restaurant_id": str(new_restaurant.id),
         "restaurant_slug": new_restaurant.slug,
     }
+
 
 @router.post("/refresh")
 def refresh_token(refresh_token: str):
