@@ -176,6 +176,13 @@ import {
 }
 
 import {
+  for_each = var.create_cloud_router_nat ? toset(["nat"]) : toset([])
+
+  to = module.vpc.google_compute_router_nat.this[0]
+  id = "projects/${var.project_id}/regions/${var.region}/routers/${local.prefix}-vpc-cr/nats/${local.prefix}-vpc-nat"
+}
+
+import {
   to = module.vpc.google_compute_firewall.allow_internal
   id = "projects/${var.project_id}/global/firewalls/${local.prefix}-vpc-allow-internal"
 }
