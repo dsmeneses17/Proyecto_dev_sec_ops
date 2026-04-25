@@ -96,6 +96,20 @@ resource "google_service_account" "frontend" {
   display_name = "LiveMenu Frontend ${var.environment}"
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["backend-sa"]) : toset([])
+
+  to = google_service_account.backend[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-be-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-sa"]) : toset([])
+
+  to = google_service_account.frontend[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-fe-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+}
+
 resource "google_cloudfunctions2_function" "rotate_secret" {
   name     = "rotate-secret"
   project  = var.project_id
@@ -141,6 +155,13 @@ resource "google_cloudfunctions2_function" "rotate_secret" {
   }
 
   depends_on = [google_project_service.required]
+}
+
+import {
+  for_each = toset(["rotate-secret-function"])
+
+  to = google_cloudfunctions2_function.rotate_secret
+  id = "projects/${var.project_id}/locations/${var.region}/functions/rotate-secret"
 }
 
 import {
@@ -223,16 +244,37 @@ resource "google_project_iam_member" "rotate_secret_sa_secret_admin" {
   member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
+import {
+  for_each = toset(["rotate-secret-secret-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_secret_admin
+  id = "${var.project_id} roles/secretmanager.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
 resource "google_project_iam_member" "rotate_secret_sa_cloudsql_admin" {
   project = var.project_id
   role    = "roles/cloudsql.admin"
   member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
+import {
+  for_each = toset(["rotate-secret-cloudsql-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_cloudsql_admin
+  id = "${var.project_id} roles/cloudsql.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
 resource "google_project_iam_member" "rotate_secret_sa_run_admin" {
   project = var.project_id
   role    = "roles/run.admin"
   member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = toset(["rotate-secret-run-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_run_admin
+  id = "${var.project_id} roles/run.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
 resource "google_service_account_iam_member" "rotate_secret_backend_sa_user" {
@@ -243,12 +285,26 @@ resource "google_service_account_iam_member" "rotate_secret_backend_sa_user" {
   member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["rotate-secret-backend-sa-user"]) : toset([])
+
+  to = google_service_account_iam_member.rotate_secret_backend_sa_user[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-be-${var.environment}@${var.project_id}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
 resource "google_service_account_iam_member" "rotate_secret_frontend_sa_user" {
   count = var.create_cloud_run ? 1 : 0
 
   service_account_id = google_service_account.frontend[0].name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["rotate-secret-frontend-sa-user"]) : toset([])
+
+  to = google_service_account_iam_member.rotate_secret_frontend_sa_user[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-fe-${var.environment}@${var.project_id}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
 }
 
 module "storage" {
@@ -293,6 +349,13 @@ module "backend" {
   depends_on = [google_project_service.required, module.cloud_sql]
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["backend-cloud-run"]) : toset([])
+
+  to = module.backend[0].google_cloud_run_v2_service.this
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-backend"
+}
+
 resource "google_secret_manager_secret_iam_member" "backend_jwt_accessor" {
   count = var.create_cloud_run ? 1 : 0
 
@@ -321,12 +384,26 @@ resource "google_cloud_run_v2_service_iam_member" "backend_frontend_invoker" {
   member   = "serviceAccount:${google_service_account.frontend[0].email}"
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["backend-frontend-invoker"]) : toset([])
+
+  to = google_cloud_run_v2_service_iam_member.backend_frontend_invoker[0]
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-backend roles/run.invoker serviceAccount:${google_service_account.frontend[0].email}"
+}
+
 resource "google_project_iam_member" "backend_cloud_sql_client" {
   count = (var.create_cloud_run && var.create_cloud_sql) ? 1 : 0
 
   project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.backend[0].email}"
+}
+
+import {
+  for_each = (var.create_cloud_run && var.create_cloud_sql) ? toset(["backend-cloudsql-client"]) : toset([])
+
+  to = google_project_iam_member.backend_cloud_sql_client[0]
+  id = "${var.project_id} roles/cloudsql.client serviceAccount:${google_service_account.backend[0].email}"
 }
 
 resource "google_storage_bucket_iam_member" "backend_object_viewer" {
@@ -383,6 +460,13 @@ module "frontend" {
   depends_on = [google_project_service.required]
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-cloud-run"]) : toset([])
+
+  to = module.frontend[0].google_cloud_run_v2_service.this
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-frontend"
+}
+
 resource "google_secret_manager_secret_iam_member" "frontend_jwt_accessor" {
   count = var.create_cloud_run ? 1 : 0
 
@@ -390,6 +474,13 @@ resource "google_secret_manager_secret_iam_member" "frontend_jwt_accessor" {
   secret_id = var.jwt_secret_name
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.frontend[0].email}"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-jwt-accessor"]) : toset([])
+
+  to = google_secret_manager_secret_iam_member.frontend_jwt_accessor[0]
+  id = "projects/${var.project_id}/secrets/${var.jwt_secret_name}/roles/secretmanager.secretAccessor/serviceAccount:${google_service_account.frontend[0].email}"
 }
 
 module "vpc" {

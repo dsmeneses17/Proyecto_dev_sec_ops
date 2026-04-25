@@ -1,12 +1,12 @@
 create_cloud_router_nat = true
 create_cloud_dns = false
-dns_domain       = ""
+dns_domain       = "livemenudevsecops.com"
 
 project_id  = "proyecto-devsecops-493813"
 region      = "us-central1"
 environment = "foundation-dev"
 
-create_frontend_lb = false
+create_frontend_lb = true
 create_waf_policy  = true
 
 frontend_cloud_run_service_name = ""
