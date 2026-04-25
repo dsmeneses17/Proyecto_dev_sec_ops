@@ -93,6 +93,12 @@ jobs:
           import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
           import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
           import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+          import_if_missing "google_cloudfunctions2_function.rotate_secret" "projects/${PROJECT_ID}/locations/${{ vars.GCP_REGION }}/functions/rotate-secret"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_secret_admin" "${PROJECT_ID} roles/secretmanager.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_cloudsql_admin" "${PROJECT_ID} roles/cloudsql.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_run_admin" "${PROJECT_ID} roles/run.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_service_account_iam_member.rotate_secret_backend_sa_user" "projects/${PROJECT_ID}/serviceAccounts/lm-be-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_service_account_iam_member.rotate_secret_frontend_sa_user" "projects/${PROJECT_ID}/serviceAccounts/lm-fe-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
 
       - name: Terraform fmt check
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -107,7 +113,6 @@ jobs:
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_manage_rotate_secret_function: "false"
           TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
           TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
@@ -210,13 +215,18 @@ jobs:
           import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
           import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
           import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+          import_if_missing "google_cloudfunctions2_function.rotate_secret" "projects/${PROJECT_ID}/locations/${{ vars.GCP_REGION }}/functions/rotate-secret"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_secret_admin" "${PROJECT_ID} roles/secretmanager.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_cloudsql_admin" "${PROJECT_ID} roles/cloudsql.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_project_iam_member.rotate_secret_sa_run_admin" "${PROJECT_ID} roles/run.admin serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_service_account_iam_member.rotate_secret_backend_sa_user" "projects/${PROJECT_ID}/serviceAccounts/lm-be-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
+          import_if_missing "google_service_account_iam_member.rotate_secret_frontend_sa_user" "projects/${PROJECT_ID}/serviceAccounts/lm-fe-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${PROJECT_ID}@appspot.gserviceaccount.com"
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_manage_rotate_secret_function: "false"
           TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
           TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
