@@ -74,8 +74,8 @@ jobs:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_create_cloud_run: "true"
-          TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
-          TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
+          TF_VAR_frontend_image: ${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
+          TF_VAR_backend_image: ${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: terraform plan -out=tfplan
@@ -149,8 +149,8 @@ jobs:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_create_cloud_run: "true"
-          TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
-          TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
+          TF_VAR_frontend_image: ${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
+          TF_VAR_backend_image: ${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: terraform apply -auto-approve

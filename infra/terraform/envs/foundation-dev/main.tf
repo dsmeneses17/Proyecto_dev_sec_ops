@@ -480,7 +480,7 @@ import {
   for_each = var.create_cloud_run ? toset(["frontend-jwt-accessor"]) : toset([])
 
   to = google_secret_manager_secret_iam_member.frontend_jwt_accessor[0]
-  id = "projects/${var.project_id}/secrets/${var.jwt_secret_name}/roles/secretmanager.secretAccessor/serviceAccount:${google_service_account.frontend[0].email}"
+  id = "projects/${var.project_id}/secrets/${var.jwt_secret_name} roles/secretmanager.secretAccessor serviceAccount:${google_service_account.frontend[0].email}"
 }
 
 module "vpc" {
@@ -545,6 +545,90 @@ module "frontend_lb" {
   https_forwarding_rule_name        = "${local.prefix}-frontend-https-fr"
 
   depends_on = [google_project_service.required, module.frontend, google_dns_managed_zone.public]
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-address"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_address.this
+  id = "projects/${var.project_id}/global/addresses/${local.prefix}-frontend-ip"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-neg"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_region_network_endpoint_group.frontend
+  id = "projects/${var.project_id}/regions/${var.region}/networkEndpointGroups/${local.prefix}-frontend-neg"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-backend-service"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_backend_service.frontend
+  id = "projects/${var.project_id}/global/backendServices/${local.prefix}-frontend-bes"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-urlmap"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_url_map.this
+  id = "projects/${var.project_id}/global/urlMaps/${local.prefix}-frontend-urlmap"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-urlmap-redirect"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_url_map.redirect[0]
+  id = "projects/${var.project_id}/global/urlMaps/${local.prefix}-frontend-urlmap-redirect"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-http-proxy"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_target_http_proxy.this[0]
+  id = "projects/${var.project_id}/global/targetHttpProxies/${local.prefix}-frontend-http-proxy"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-https-proxy"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_target_https_proxy.this[0]
+  id = "projects/${var.project_id}/global/targetHttpsProxies/${local.prefix}-frontend-https-proxy"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-http-fr"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_forwarding_rule.http[0]
+  id = "projects/${var.project_id}/global/forwardingRules/${local.prefix}-frontend-http-fr"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-https-fr"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_forwarding_rule.https[0]
+  id = "projects/${var.project_id}/global/forwardingRules/${local.prefix}-frontend-https-fr"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-cert"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_ssl_certificate.self_signed[0]
+  id = "projects/${var.project_id}/global/sslCertificates/${local.prefix}-frontend-ip-self-signed-cert"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-private-key"]) : toset([])
+
+  to = module.frontend_lb[0].tls_private_key.self_signed[0]
+  id = "d6f23d045707af87e2092beed75e826292ed7f71"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-tls-cert"]) : toset([])
+
+  to = module.frontend_lb[0].tls_self_signed_cert.this[0]
+  id = "210766050311584507726923681265505177428"
 }
 
 resource "google_dns_record_set" "frontend_a" {
