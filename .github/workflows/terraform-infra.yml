@@ -60,6 +60,40 @@ jobs:
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
             -upgrade
 
+      - name: Adopt existing foundation resources into state (idempotent)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+
+          import_if_missing() {
+            local address="$1"
+            local import_id="$2"
+
+            if terraform state show "$address" >/dev/null 2>&1; then
+              echo "State already contains $address"
+              return 0
+            fi
+
+            echo "Importing $address from $import_id"
+            if terraform import "$address" "$import_id"; then
+              echo "Imported $address"
+            else
+              echo "::warning::Could not import $address (it may not exist yet)."
+            fi
+          }
+
+          PROJECT_ID="${{ vars.GCP_PROJECT_ID }}"
+          ENV_NAME="foundation-dev"
+          PREFIX="livemenu-${ENV_NAME}"
+          BUCKET_NAME="${PREFIX}-images-${PROJECT_ID}"
+
+          import_if_missing "module.vpc.google_compute_network.this" "projects/${PROJECT_ID}/global/networks/${PREFIX}-vpc"
+          import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+          import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
+          import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+
       - name: Terraform fmt check
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -recursive
@@ -73,6 +107,7 @@ jobs:
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_manage_rotate_secret_function: "false"
           TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
           TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
@@ -142,11 +177,46 @@ jobs:
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
             -upgrade
 
+      - name: Adopt existing foundation resources into state (idempotent)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+
+          import_if_missing() {
+            local address="$1"
+            local import_id="$2"
+
+            if terraform state show "$address" >/dev/null 2>&1; then
+              echo "State already contains $address"
+              return 0
+            fi
+
+            echo "Importing $address from $import_id"
+            if terraform import "$address" "$import_id"; then
+              echo "Imported $address"
+            else
+              echo "::warning::Could not import $address (it may not exist yet)."
+            fi
+          }
+
+          PROJECT_ID="${{ vars.GCP_PROJECT_ID }}"
+          ENV_NAME="foundation-dev"
+          PREFIX="livemenu-${ENV_NAME}"
+          BUCKET_NAME="${PREFIX}-images-${PROJECT_ID}"
+
+          import_if_missing "module.vpc.google_compute_network.this" "projects/${PROJECT_ID}/global/networks/${PREFIX}-vpc"
+          import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+          import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
+          import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_manage_rotate_secret_function: "false"
           TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
           TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
