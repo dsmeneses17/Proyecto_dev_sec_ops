@@ -161,6 +161,25 @@ import {
   id = "projects/${var.project_id}/global/networks/${local.prefix}-vpc"
 }
 
+import {
+  for_each = var.subnets
+
+  to = module.vpc.google_compute_subnetwork.this[each.key]
+  id = "projects/${var.project_id}/regions/${each.value.region}/subnetworks/${each.key}"
+}
+
+import {
+  for_each = var.create_cloud_router_nat ? toset(["router"]) : toset([])
+
+  to = module.vpc.google_compute_router.this[0]
+  id = "projects/${var.project_id}/regions/${var.region}/routers/${local.prefix}-vpc-cr"
+}
+
+import {
+  to = module.vpc.google_compute_firewall.allow_internal
+  id = "projects/${var.project_id}/global/firewalls/${local.prefix}-vpc-allow-internal"
+}
+
 resource "google_service_account" "worker" {
   count = var.create_storage ? 1 : 0
 

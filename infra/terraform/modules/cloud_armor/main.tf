@@ -63,7 +63,7 @@ resource "google_compute_security_policy" "this" {
   # Rate limiting basico por IP
   rule {
     priority = 1100
-    action   = "throttle"
+    action   = "rate_based_ban"
 
     match {
       versioned_expr = "SRC_IPS_V1"
@@ -75,8 +75,14 @@ resource "google_compute_security_policy" "this" {
     rate_limit_options {
       conform_action = "allow"
       exceed_action  = "deny(429)"
+      ban_duration_sec = 300
 
       rate_limit_threshold {
+        count        = var.rate_limit_count
+        interval_sec = var.rate_limit_interval_sec
+      }
+
+      ban_threshold {
         count        = var.rate_limit_count
         interval_sec = var.rate_limit_interval_sec
       }
