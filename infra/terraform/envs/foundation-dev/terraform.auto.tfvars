@@ -45,3 +45,5 @@ subnets = {
 }
 
 create_cloud_router_nat = true
+create_cloud_dns = false
+dns_domain       = ""

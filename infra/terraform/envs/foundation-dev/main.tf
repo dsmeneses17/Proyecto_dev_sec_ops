@@ -117,10 +117,6 @@ resource "google_cloudfunctions_function" "rotate_secret" {
   }
 }
 
-import {
-  to = google_cloudfunctions_function.rotate_secret
-  id = "projects/${var.project_id}/locations/${var.region}/functions/rotate-secret"
-}
 
 import {
   to = google_project_service.required["cloudbuild.googleapis.com"]
