@@ -18,6 +18,12 @@ variable "create_cloud_run" {
   default     = false
 }
 
+variable "manage_rotate_secret_function" {
+  description = "Si true, Terraform gestiona la funcion Gen1 rotate-secret. Por defecto se desactiva para evitar conflicto con funciones Gen2 existentes"
+  type        = bool
+  default     = false
+}
+
 variable "create_storage" {
   description = "Si true, crea bucket de imagenes en Cloud Storage"
   type        = bool

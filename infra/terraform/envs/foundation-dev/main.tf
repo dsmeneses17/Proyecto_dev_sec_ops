@@ -80,6 +80,8 @@ resource "google_service_account" "frontend" {
 }
 
 resource "google_cloudfunctions_function" "rotate_secret" {
+  count = var.manage_rotate_secret_function ? 1 : 0
+
   name                  = "rotate-secret"
   project               = var.project_id
   region                = var.region
@@ -131,6 +133,32 @@ import {
 import {
   to = google_project_service.required["pubsub.googleapis.com"]
   id = "${var.project_id}/pubsub.googleapis.com"
+}
+
+import {
+  for_each = var.create_storage ? toset(["worker-sa"]) : toset([])
+
+  to = google_service_account.worker[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-worker-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+}
+
+import {
+  for_each = var.create_waf_policy ? toset(["waf-policy"]) : toset([])
+
+  to = module.waf[0].google_compute_security_policy.this
+  id = "projects/${var.project_id}/global/securityPolicies/${local.prefix}-armor"
+}
+
+import {
+  for_each = var.create_storage ? toset(["images-bucket"]) : toset([])
+
+  to = module.storage[0].google_storage_bucket.this
+  id = local.images_bucket_name
+}
+
+import {
+  to = module.vpc.google_compute_network.this
+  id = "projects/${var.project_id}/global/networks/${local.prefix}-vpc"
 }
 
 resource "google_service_account" "worker" {
