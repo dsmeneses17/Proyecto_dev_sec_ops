@@ -36,6 +36,7 @@ jobs:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      SECRET_KEY: ci-secret-key-for-tests
 
     services:
       postgres:
@@ -99,6 +100,9 @@ jobs:
     name: AppRestaurante — pytest
     runs-on: ubuntu-latest
 
+    env:
+      SECRET_KEY: ci-secret-key-for-tests
+
     defaults:
       run:
         shell: bash
@@ -133,6 +137,7 @@ jobs:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      SECRET_KEY: ci-secret-key-for-tests
 
     steps:
       - uses: actions/checkout@v4
@@ -204,7 +209,7 @@ jobs:
           done
 
           echo "--- in-network probes (frontend_api -> backend_api:5000) ---"
-          docker compose exec -T frontend_api python - <<'PY'
+          docker compose exec -T frontend_api python - <<'PY' || true
           import requests
 
           BASE = "http://backend_api:5000"

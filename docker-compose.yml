@@ -15,12 +15,14 @@ services:
     build: ./ApiRestaurante
     environment:
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
     depends_on:
       - postgres_db
 
   frontend_api:
     build: ./AppRestaurante
     environment:
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
