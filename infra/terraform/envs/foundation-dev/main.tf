@@ -365,13 +365,6 @@ resource "google_secret_manager_secret_iam_member" "backend_jwt_accessor" {
   member    = "serviceAccount:${google_service_account.backend[0].email}"
 }
 
-import {
-  for_each = var.create_cloud_run ? toset(["backend-jwt-accessor"]) : toset([])
-
-  to = google_secret_manager_secret_iam_member.backend_jwt_accessor[0]
-  id = "projects/${var.project_id}/secrets/${var.jwt_secret_name} roles/secretmanager.secretAccessor serviceAccount:${google_service_account.backend[0].email}"
-}
-
 resource "google_secret_manager_secret_iam_member" "backend_db_password_accessor" {
   count = (var.create_cloud_run && var.create_cloud_sql) ? 1 : 0
 
@@ -379,13 +372,6 @@ resource "google_secret_manager_secret_iam_member" "backend_db_password_accessor
   secret_id = var.db_password_secret_name
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.backend[0].email}"
-}
-
-import {
-  for_each = (var.create_cloud_run && var.create_cloud_sql) ? toset(["backend-db-password-accessor"]) : toset([])
-
-  to = google_secret_manager_secret_iam_member.backend_db_password_accessor[0]
-  id = "projects/${var.project_id}/secrets/${var.db_password_secret_name} roles/secretmanager.secretAccessor serviceAccount:${google_service_account.backend[0].email}"
 }
 
 resource "google_cloud_run_v2_service_iam_member" "backend_frontend_invoker" {
@@ -495,13 +481,6 @@ resource "google_secret_manager_secret_iam_member" "frontend_jwt_accessor" {
   secret_id = var.jwt_secret_name
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.frontend[0].email}"
-}
-
-import {
-  for_each = var.create_cloud_run ? toset(["frontend-jwt-accessor"]) : toset([])
-
-  to = google_secret_manager_secret_iam_member.frontend_jwt_accessor[0]
-  id = "projects/${var.project_id}/secrets/${var.jwt_secret_name} roles/secretmanager.secretAccessor serviceAccount:${google_service_account.frontend[0].email}"
 }
 
 module "vpc" {
