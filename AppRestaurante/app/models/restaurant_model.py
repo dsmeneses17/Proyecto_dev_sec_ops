@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 
 class RestaurantBase(BaseModel):
@@ -10,7 +10,7 @@ class RestaurantBase(BaseModel):
     telefono: str | None = None
     direccion: str | None = None
     horarios: dict | None = None
-    logo: HttpUrl | None = None
+    logo: str | None = None
 
 
 class RestaurantCreate(RestaurantBase):

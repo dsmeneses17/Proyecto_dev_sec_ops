@@ -1,13 +1,13 @@
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class RestaurantBase(BaseModel):
     nombre: Annotated[str, Field(max_length=100)]
     descripcion: Annotated[str, Field(max_length=500)] | None = None
-    logo: HttpUrl | None = None
+    logo: str | None = None
     telefono: str | None = None
     direccion: str | None = None
     horarios: dict | None = None
