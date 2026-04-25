@@ -1,183 +1,181 @@
-# 🍽️ Proyecto DevSecOps — Restaurante Digital
+# Proyecto DevSecOps - Restaurante Digital
 
-Plataforma de menú digital para restaurantes con arquitectura desacoplada, seguridad TLS y pipeline CI/CD completo.
+Plataforma de menu digital para restaurantes con frontend web, API REST y despliegue local con Docker Compose. El proyecto tambien incluye arquitectura objetivo en GCP con Terraform.
 
-| Servicio | Tecnología | Rol |
-|----------|-----------|-----|
-| **`backend_api`** (ApiRestaurante) | FastAPI · SQLAlchemy · Pydantic v2 | API REST (lógica de negocio + PostgreSQL) |
-| **`frontend_api`** (AppRestaurante) | FastAPI · Jinja2 · Bootstrap 5 | Interfaz web (UI + integración con backend) |
-| **`postgres_db`** | PostgreSQL 15 | Base de datos relacional |
-| **`secure_gateway`** | Nginx + TLS autofirmado | Reverse proxy HTTPS, terminación SSL |
+## Acceso rapido a documentacion
 
----
+- [Documentacion principal](docs/DOCUMENTACION_PROYECTO.md)
+- [Mapa de arquitectura](docs/MAPA_ARQUITECTURA.md)
+- [Diagrama GCP en PNG](docs/arquitectura_gcp_actual.png)
+- [Deployment local](docs/DEPLOYMENT.md)
+- [API](docs/API_DOCUMENTATION.md)
+- [Cobertura requerimientos](docs/COBERTURA_REQUERIMIENTOS.md)
+- [Cobertura RNF](docs/COBERTURA_RNF.md)
+- [Testing](docs/TESTING.md)
 
-## Arquitectura
+## Estado actual del proyecto
+
+### Local (operacion diaria)
+
+| Servicio | Tecnologia | Rol |
+|----------|------------|-----|
+| `frontend_api` | FastAPI + Jinja2 + Bootstrap | Interfaz web |
+| `backend_api` | FastAPI + SQLAlchemy + Pydantic | API REST |
+| `postgres_db` | PostgreSQL 15 | Persistencia |
+| `secure_gateway` | Nginx + TLS | Entrada HTTPS y enrutamiento |
+
+### GCP (estado Terraform)
+
+Estado actual en `infra/terraform/envs/foundation-dev/terraform.auto.tfvars`:
+
+- `create_cloud_dns=false`
+- `create_frontend_lb=false`
+- `create_waf_policy=true`
+
+Esto significa que la base de red y seguridad esta activa por Terraform, pero no todo el flujo publico de frontend/LB esta habilitado en ese entorno base.
+
+## Arquitectura local
 
 ```text
- Internet / Navegador
-        │
-        ▼
- ┌──────────────┐
- │ secure_gateway│  ← Nginx (puerto 443/80)
- │   TLS term.   │
- └──┬────────┬──┘
-     │        │
-     │  /backend-api/*    → backend_api:5000
-     │  /*                → frontend_api:8000
-     │
- ┌───▼───┐  ┌───▼────┐
- │frontend│  │ backend │
- │  :8000 │  │  :5000  │
- └────────┘  └───┬────┘
-                  │
-            ┌─────▼─────┐
-            │ postgres_db│
-            │   :5432    │
-            └────────────┘
+Internet / Navegador
+       |
+       v
+secure_gateway (80/443)
+  |- /backend-api/* -> backend_api:5000
+  |- /*             -> frontend_api:8000
+backend_api -> postgres_db:5432
+frontend_api -> backend_api
 ```
 
----
+## Arquitectura en la nube (GCP)
 
-## Requisitos previos
+Arquitectura referencial/objetivo en GCP:
 
-- **Docker Desktop** 4.x+ con Docker Compose v2
-- (Opcional) Python 3.11+ y Node.js 20+ para desarrollo local
+```text
+Usuarios
+  |
+  v
+Global HTTPS Load Balancer
+  |
+  v
+Cloud Armor (WAF)
+  |
+  v
+Serverless NEG
+  |
+  v
+Cloud Run frontend -> Cloud Run backend
+                |\
+                | -> Cloud SQL PostgreSQL
+                | -> Secret Manager
+                | -> Cloud Storage
+```
 
----
+Referencias detalladas:
 
-## Inicio rápido
+- [Mapa de arquitectura GCP](docs/MAPA_ARQUITECTURA.md)
+- [Diagrama GCP en PNG](docs/arquitectura_gcp_actual.png)
+- [Documento tecnico consolidado](docs/DOCUMENTACION_PROYECTO.md)
 
-### 1) Configurar variables de entorno
+## Inicio rapido local
 
-Crear un archivo `.env` en la raíz (junto a `docker-compose.yml`). Ver [`.env.example`](.env.example) como referencia.
+### 1. Crear `.env`
 
-Variables **obligatorias**:
+Usa [.env.example](.env.example) y define minimo:
 
 ```env
 POSTGRES_USER=mi_usuario
-POSTGRES_PASSWORD=mi_contraseña
+POSTGRES_PASSWORD=mi_password_segura
 POSTGRES_DB=Restaurante
-DATABASE_URL=postgresql+psycopg2://mi_usuario:mi_contraseña@postgres_db:5432/Restaurante
+DATABASE_URL=postgresql+psycopg2://mi_usuario:mi_password_segura@postgres_db:5432/Restaurante
+SECRET_KEY=una_clave_larga_y_segura
 ```
 
-### 2) Levantar el entorno
+### 2. Levantar servicios
 
 ```bash
-docker compose --env-file .env up --build -d
+docker compose --env-file .env up -d --build
 ```
 
-### 3) Inicializar tablas
-
-> El backend no aplica migraciones automáticas; se ejecuta el script de creación de tablas.
+### 3. Crear tablas
 
 ```bash
 docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crearTablas
 ```
 
-### 4) Verificar servicios
+### 4. Validar endpoints
 
-```bash
-docker compose --env-file .env ps
-```
+- `https://localhost`
+- `https://localhost/backend-api/docs`
+- `https://localhost/backend-api/`
 
-Los 4 servicios deben mostrar estado `running`.
+## Controles de seguridad implementados
 
-### 5) Accesos
+- HTTPS con redireccion HTTP -> HTTPS en gateway.
+- JWT para autenticacion/autorizacion.
+- `SECRET_KEY` requerida por frontend y backend.
+- Rate limit de 100 solicitudes por minuto por IP.
+- Cookies de sesion seguras (`SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAMESITE`).
+- Uso de Secret Manager en arquitectura GCP.
 
-| URL | Descripción |
-|-----|-------------|
-| `https://localhost` | Aplicación web (frontend) |
-| `https://localhost/backend-api/docs` | Swagger UI (documentación interactiva) |
-| `https://localhost/backend-api/` | API REST root |
+## Variables de entorno clave
 
-> ⚠️ El gateway genera un certificado TLS autofirmado. En el navegador aparecerá una advertencia de confianza — es esperado en entorno local.
+### GitHub Secrets
 
-### 6) Ver logs
+| Variable | Uso |
+|----------|-----|
+| `GCP_DEPLOY_SA` | Service Account usada por GitHub Actions para despliegue en GCP (OIDC). |
+| `GCP_WIF_PROVIDER` | Workload Identity Provider para federacion OIDC GitHub -> GCP. |
+| `POSTGRES_USER` | Usuario PostgreSQL para despliegue local/compose. |
+| `POSTGRES_PASSWORD` | Password PostgreSQL para despliegue local/compose. |
+| `POSTGRES_DB` | Nombre de base de datos PostgreSQL para despliegue local/compose. |
+| `TF_VAR_DB_PASSWORD` | Password de Cloud SQL inyectada a Terraform como variable sensible. |
+| `TF_VAR_JWT_SECRET` | Secreto JWT inyectado a Terraform como variable sensible. |
 
-```bash
-docker compose --env-file .env logs -f backend_api
-docker compose --env-file .env logs -f frontend_api
-docker compose --env-file .env logs -f secure_gateway
-```
+### GitHub Variables (Repository/Environment Variables)
 
-### 7) Apagar entorno
+| Variable | Uso |
+|----------|-----|
+| `ARTIFACT_REGISTRY_REPO` | Repositorio de imagenes para frontend/backend en pipeline. |
+| `CLOUD_RUN_BACKEND_SERVICE` | Nombre del servicio backend en Cloud Run. |
+| `CLOUD_RUN_FRONTEND_SERVICE` | Nombre del servicio frontend en Cloud Run. |
+| `GCP_PROJECT_ID` | Proyecto de GCP objetivo para infraestructura y despliegue. |
+| `GCP_REGION` | Region principal para recursos (Cloud Run, Artifact Registry, etc.). |
+| `TF_STATE_BUCKET` | Bucket remoto del estado Terraform. |
+| `TF_STATE_PREFIX_DEV` | Prefijo de estado para entorno dev/foundation-dev. |
+| `TF_VAR_SUBNETS` | Mapa de subredes consumido por Terraform (`var.subnets`). |
 
-```bash
-docker compose --env-file .env down        # preserva datos
-docker compose --env-file .env down -v     # borra volumen de BD
-```
+### Variables de aplicacion (runtime)
 
----
+| Variable | Uso |
+|----------|-----|
+| `DATABASE_URL` | Conexion a PostgreSQL en backend. |
+| `SECRET_KEY` | Firma y validacion JWT en frontend y backend. |
+| `BACKEND_URL` | URL backend usada por frontend. |
+| `SESSION_COOKIE_SECURE` | Cookie solo por HTTPS. |
+| `SESSION_COOKIE_SAMESITE` | Politica SameSite. |
+| `ENFORCE_HTTPS_REDIRECT` | Forzar HTTPS en frontend. |
+| `S3_*` / `AWS_*` | Object storage compatible S3. |
+| `GCS_*` | Object storage en GCP. |
+| `IMAGE_*` | Configuracion del worker de imagenes. |
 
-## Variables de entorno
+## Pruebas y calidad
 
-Todas se configuran en el archivo `.env`. **No se incluyen credenciales** en el repositorio.
-
-### Base de datos
-
-| Variable | Requerida | Descripción |
-|----------|-----------|-------------|
-| `POSTGRES_USER` | ✅ | Usuario PostgreSQL |
-| `POSTGRES_PASSWORD` | ✅ | Contraseña PostgreSQL |
-| `POSTGRES_DB` | ✅ | Nombre de la base de datos |
-| `DATABASE_URL` | ✅ | Connection string (usado por el backend) |
-
-### Object Storage (S3-compatible)
-
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `S3_BUCKET_NAME` | — | Nombre del bucket |
-| `S3_REGION` | `us-east-1` | Región AWS/S3 |
-| `S3_ENDPOINT_URL` | — | Endpoint personalizado (MinIO, etc.) |
-| `S3_PUBLIC_BASE_URL` | — | URL base pública para imágenes |
-| `S3_FORCE_PATH_STYLE` | `false` | Path-style access |
-| `AWS_ACCESS_KEY_ID` | — | Credencial de acceso |
-| `AWS_SECRET_ACCESS_KEY` | — | Credencial secreta |
-
-### Worker pool de imágenes
-
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `IMAGE_WORKERS` | `2` | Threads de procesamiento |
-| `IMAGE_QUEUE_MAXSIZE` | `100` | Tamaño máximo de la cola |
-| `IMAGE_QUEUE_PUT_TIMEOUT_SEC` | `2.0` | Timeout para encolar (s) |
-| `IMAGE_SHUTDOWN_TIMEOUT_SEC` | `30` | Timeout de apagado (s) |
-| `IMAGE_MAX_FILE_MB` | `5` | Tamaño máximo de archivo (MB) |
-| `IMAGE_ALLOWED_CONTENT_TYPES` | `image/jpeg,image/png,image/webp` | MIME types permitidos |
-| `IMAGE_ALLOWED_TARGETS` | `logo,dish,general` | Targets de subida |
-
-### Seguridad / Sesión
-
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `SESSION_COOKIE_SECURE` | `true` | Cookie secure flag |
-| `SESSION_COOKIE_SAMESITE` | `lax` | SameSite policy |
-| `ENFORCE_HTTPS_REDIRECT` | `true` | Redirigir HTTP → HTTPS |
-| `TLS_CERT_CN` | `localhost` | Common Name del certificado |
-| `TLS_CERT_DAYS` | `365` | Días de validez del certificado |
-
----
-
-## Pruebas
-
-### Backend (ApiRestaurante)
-
-Requiere PostgreSQL accesible y `DATABASE_URL` definida.
+### Backend
 
 ```bash
 cd ApiRestaurante
-export DATABASE_URL="postgresql+psycopg2://<user>:<pass>@localhost:5432/<db>"
 pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=60
 ```
 
-### Frontend (AppRestaurante)
+### Frontend
 
 ```bash
 cd AppRestaurante
 pytest tests/ --cov=app --cov-report=term-missing
 ```
 
-### E2E (Playwright)
+### E2E
 
 ```bash
 cd e2e
@@ -186,148 +184,59 @@ npx playwright install --with-deps
 E2E_BASE_URL=https://localhost npm run test:ci
 ```
 
-### Lighthouse (RNF-09)
-
-```bash
-npm install -g @lhci/cli
-lhci autorun --config=lighthouserc.js
-```
-
-### Linter (Ruff — RNF-06)
+### Lint
 
 ```bash
 ruff check --config pyproject.toml
 ruff format --check --config pyproject.toml
 ```
 
----
-
 ## CI/CD
 
-El pipeline se ejecuta en GitHub Actions en cada push a `main`. Archivo: [`.github/workflows/api-tests.yml`](.github/workflows/api-tests.yml).
+Workflows configurados en GitHub Actions:
 
-| Job | Descripción | RNF |
-|-----|-------------|-----|
-| `ruff-lint` | Linting Python con Ruff | RNF-06 |
-| `apirestaurante-pytest` | Tests del backend + cobertura ≥ 60% | RNF-07 |
-| `apprestaurante-pytest` | Tests del frontend | RNF-07 |
-| `playwright-e2e` | Tests end-to-end con Docker Compose | — |
-| `lighthouse-audit` | Auditoría Lighthouse ≥ 90 | RNF-09 |
+- [api-tests.yml](.github/workflows/api-tests.yml) para calidad y pruebas de aplicacion.
+- [terraform-infra.yml](.github/workflows/terraform-infra.yml) para infraestructura IaC en foundation-dev.
 
----
+### Workflow aplicacion
 
-## Backup y restauración
+Archivo: [api-tests.yml](.github/workflows/api-tests.yml)
 
-### Importar respaldo SQL
+- `ruff-lint`
+- `apirestaurante-pytest`
+- `apprestaurante-pytest`
+- `playwright-e2e`
+- `lighthouse-audit`
 
-```bash
-cat backup_complete.sql | docker compose --env-file .env exec -T postgres_db psql -U $POSTGRES_USER -d $POSTGRES_DB
-```
+### Workflow infraestructura (Terraform)
 
-### Importar respaldo dump
+Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
-```bash
-docker compose --env-file .env exec -T postgres_db pg_restore \
-  -U $POSTGRES_USER -d $POSTGRES_DB --clean --if-exists \
-  /dev/stdin < backup_complete.dump
-```
+- `plan-dev`: init, validate y plan de Terraform para foundation-dev.
+- `security-scan-dev`: escaneo IaC con Trivy y bloqueo por severidad HIGH/CRITICAL.
+- `apply-dev`: aplica Terraform en push a main, condicionado a plan y escaneo exitosos.
 
-### Crear backup
+## Backup y restauracion
+
+### Importar SQL
 
 ```bash
-# SQL
-docker compose --env-file .env exec -T postgres_db \
-  pg_dump -U $POSTGRES_USER -d $POSTGRES_DB > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Dump binario
-docker compose --env-file .env exec -T postgres_db \
-  pg_dump -U $POSTGRES_USER -d $POSTGRES_DB -Fc > backup_$(date +%Y%m%d_%H%M%S).dump
+docker compose --env-file .env exec -T postgres_db psql -U $POSTGRES_USER -d $POSTGRES_DB < backup_complete.sql
 ```
 
----
-
-## Estructura del proyecto
-
-```text
-Restaurante/
-├── docker-compose.yml
-├── pyproject.toml            # Config de Ruff (linter)
-├── lighthouserc.js           # Config de Lighthouse CI
-├── .env.example              # Plantilla de variables de entorno
-├── .github/workflows/
-│   └── api-tests.yml         # Pipeline CI (5 jobs)
-├── infra/
-│   └── nginx/                # Reverse proxy TLS (secure_gateway)
-│       ├── Dockerfile
-│       ├── nginx.conf
-│       └── entrypoint.sh
-├── ApiRestaurante/           # Backend (API REST)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── routers/          # Endpoints (auth, restaurants, categories, dishes, analytics, public_menu)
-│   │   ├── services/         # Lógica de negocio
-│   │   ├── repositories/     # Acceso a datos
-│   │   ├── models/           # Modelos SQLAlchemy
-│   │   ├── schemas/          # Schemas Pydantic
-│   │   ├── core/             # Seguridad, config
-│   │   ├── utils/            # Utilidades (cache, slug, JWT)
-│   │   └── z_crearTablas/    # Script creación de tablas
-│   └── tests/
-├── AppRestaurante/           # Frontend (Web UI)
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── app/
-│   │   ├── routers/          # Rutas web (auth, restaurant, category, dish, menu, etc.)
-│   │   ├── services/         # Llamadas al backend API
-│   │   ├── templates/        # Jinja2 + Bootstrap 5
-│   │   ├── static/           # CSS, imágenes
-│   │   ├── ui/               # Template engine config
-│   │   ├── core/             # Config, seguridad
-│   │   └── utils/            # Helpers
-│   └── tests/
-├── e2e/                      # Tests end-to-end
-│   ├── playwright.config.ts
-│   └── tests/
-├── docs/                     # Documentación del proyecto
-│   ├── API_DOCUMENTATION.md  # 30 endpoints documentados
-│   ├── COBERTURA_REQUERIMIENTOS.md  # 24/24 requerimientos funcionales
-│   ├── COBERTURA_RNF.md      # Requerimientos no funcionales
-│   ├── MAPA_ARQUITECTURA.md  # Diagrama Mermaid
-│   ├── RNF-09_LIGHTHOUSE.md  # Evidencia Lighthouse
-│   └── TESTING.md            # Estrategia de testing
-└── backup_complete.sql       # Respaldo de datos iniciales
-```
-
----
-
-## Comandos útiles
+### Importar dump binario
 
 ```bash
-# Rebuild completo
-docker compose --env-file .env down -v
-docker compose --env-file .env up --build -d
+docker compose --env-file .env exec -T postgres_db pg_restore -U $POSTGRES_USER -d $POSTGRES_DB --clean --if-exists /dev/stdin < backup_complete.dump
+```
 
-# Estado de servicios
+## Operacion diaria
+
+```bash
 docker compose --env-file .env ps
-
-# Reiniciar solo backend
-docker compose --env-file .env restart backend_api
-
-# Reiniciar gateway (regenera certificado si fue eliminado)
-docker compose --env-file .env restart secure_gateway
+docker compose --env-file .env logs -f secure_gateway
+docker compose --env-file .env logs -f frontend_api
+docker compose --env-file .env logs -f backend_api
+docker compose --env-file .env restart
+docker compose --env-file .env down
 ```
-
----
-
-## Documentación
-
-| Documento | Descripción |
-|-----------|-------------|
-| [Deployment](docs/DEPLOYMENT.md) | Instructivo de despliegue paso a paso |
-| [API Documentation](docs/API_DOCUMENTATION.md) | Documentación completa de los 30 endpoints |
-| [Cobertura Requerimientos](docs/COBERTURA_REQUERIMIENTOS.md) | Tabla de cumplimiento de 24 requerimientos funcionales |
-| [Cobertura RNF](docs/COBERTURA_RNF.md) | Cobertura de requerimientos no funcionales |
-| [Mapa Arquitectura](docs/MAPA_ARQUITECTURA.md) | Diagrama de arquitectura (Mermaid) |
-| [Lighthouse](docs/RNF-09_LIGHTHOUSE.md) | Evidencia de auditoría Lighthouse |
-| [Testing](docs/TESTING.md) | Estrategia y plan de pruebas |
