@@ -179,7 +179,7 @@ import {
   for_each = var.create_cloud_router_nat ? toset(["nat"]) : toset([])
 
   to = module.vpc.google_compute_router_nat.this[0]
-  id = "projects/${var.project_id}/regions/${var.region}/routers/${local.prefix}-vpc-cr/nats/${local.prefix}-vpc-nat"
+  id = "projects/${var.project_id}/regions/${var.region}/routers/${local.prefix}-vpc-cr/${local.prefix}-vpc-nat"
 }
 
 import {
