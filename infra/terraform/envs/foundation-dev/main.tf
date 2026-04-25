@@ -638,20 +638,6 @@ import {
   id = "projects/${var.project_id}/global/sslCertificates/${local.prefix}-frontend-ip-self-signed-cert"
 }
 
-import {
-  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-private-key"]) : toset([])
-
-  to = module.frontend_lb[0].tls_private_key.self_signed[0]
-  id = "d6f23d045707af87e2092beed75e826292ed7f71"
-}
-
-import {
-  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-tls-cert"]) : toset([])
-
-  to = module.frontend_lb[0].tls_self_signed_cert.this[0]
-  id = "210766050311584507726923681265505177428"
-}
-
 resource "google_dns_record_set" "frontend_a" {
   count = (var.create_cloud_dns && var.create_frontend_lb) ? 1 : 0
 
