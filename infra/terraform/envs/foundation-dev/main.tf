@@ -478,7 +478,7 @@ import {
   for_each = var.create_cloud_run ? toset(["frontend-public-invoker"]) : toset([])
 
   to = module.frontend[0].google_cloud_run_v2_service_iam_member.public_invoker[0]
-  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-frontend/roles/run.invoker/allUsers"
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-frontend roles/run.invoker allUsers"
 }
 
 import {
