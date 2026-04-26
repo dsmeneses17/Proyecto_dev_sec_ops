@@ -61,6 +61,13 @@ jobs:
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
             -upgrade
 
+      - name: Query remote Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
+
       - name: Terraform fmt check
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -recursive
@@ -84,6 +91,7 @@ jobs:
           path: |
             ${{ env.TF_WORKING_DIR }}/tfplan
             ${{ env.TF_WORKING_DIR }}/backend.auto.tf
+
 
   security-scan-dev:
     name: Security scan IaC (block High/Critical)
@@ -126,11 +134,11 @@ jobs:
           echo "Destructive changes detected: ${destroy_count}"
 
           if [ "$destroy_count" -gt 0 ]; then
-            echo "❌ Plan contains delete actions. Review required before apply."
+            echo "Plan contains delete actions. Review required before apply."
             exit 1
           fi
 
-          echo "✅ Validation passed: no delete actions found."
+          echo "Validation passed: no delete actions found."
 
   manual-approval-dev:
     name: Manual approval before apply
@@ -187,9 +195,22 @@ jobs:
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
             -upgrade
 
+      - name: Query remote Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend before apply:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
+
+      - name: Download approved plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-dev-plan
+          path: ${{ env.TF_WORKING_DIR }}
+
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
