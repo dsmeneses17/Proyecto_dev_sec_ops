@@ -13,6 +13,12 @@ Plataforma de menu digital para restaurantes con frontend web, API REST y despli
 - [Cobertura RNF](docs/COBERTURA_RNF.md)
 - [Testing](docs/TESTING.md)
 
+## Docs entrega 2
+- [Seguridad](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/SEGURIDAD.md)
+- [Arquitectura GCP](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/ARQUITECTURA_GCP_ENTREGA2.md)
+- [Arquitectura GCP PNG](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/arquitectura_gcp_actual.png)
+
+
 ## Estado actual del proyecto
 
 ### Local (operacion diaria)
