@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -15,7 +16,13 @@ def _get_database_url() -> str:
     cloud_sql_connection_name = os.getenv("CLOUD_SQL_CONNECTION_NAME")
 
     if db_user and db_password and db_name and cloud_sql_connection_name:
-        return f"postgresql+psycopg2://{db_user}:{db_password}@/{db_name}?host=/cloudsql/{cloud_sql_connection_name}"
+        # Secret-rotated passwords can contain reserved URL chars; encode credentials before building DSN.
+        encoded_user = quote(db_user, safe="")
+        encoded_password = quote(db_password, safe="")
+        return (
+            f"postgresql+psycopg2://{encoded_user}:{encoded_password}@/{db_name}"
+            f"?host=/cloudsql/{cloud_sql_connection_name}"
+        )
 
     raise RuntimeError(
         "DATABASE_URL is not set. Configure DATABASE_URL directly or provide DB_USER, DB_PASSWORD, "

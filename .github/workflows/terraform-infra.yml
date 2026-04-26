@@ -19,6 +19,7 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  issues: write
 
 env:
   TF_IN_AUTOMATION: "true"
@@ -101,11 +102,59 @@ jobs:
           exit-code: 1
           format: table
 
+  validate-plan-dev:
+    name: Validate Terraform plan (block destructive changes)
+    runs-on: ubuntu-latest
+    needs: [plan-dev]
+
+    steps:
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-dev-plan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Analyze plan for destructive actions
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform show -json tfplan > tfplan.json
+
+          destroy_count=$(jq '[.resource_changes[]? | select((.change.actions | index("delete")) != null)] | length' tfplan.json)
+          echo "Destructive changes detected: ${destroy_count}"
+
+          if [ "$destroy_count" -gt 0 ]; then
+            echo "❌ Plan contains delete actions. Review required before apply."
+            exit 1
+          fi
+
+          echo "✅ Validation passed: no delete actions found."
+
+  manual-approval-dev:
+    name: Manual approval before apply
+    runs-on: ubuntu-latest
+    needs: [security-scan-dev, validate-plan-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.security-scan-dev.result == 'success' && needs.validate-plan-dev.result == 'success'
+
+    steps:
+      - name: Require explicit approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ vars.TF_APPLY_APPROVERS != '' && vars.TF_APPLY_APPROVERS || github.actor }}
+          minimum-approvals: 1
+          issue-title: "Terraform apply approval required (foundation-dev)"
+          issue-body: |
+            Terraform apply for foundation-dev is waiting for manual approval.
+            Review the plan and approve this request to continue.
+
   apply-dev:
     name: Terraform apply (foundation-dev)
     runs-on: ubuntu-latest
-    needs: [plan-dev, security-scan-dev]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan-dev.result == 'success' && needs.security-scan-dev.result == 'success'
+    needs: [plan-dev, security-scan-dev, validate-plan-dev, manual-approval-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan-dev.result == 'success' && needs.security-scan-dev.result == 'success' && needs.validate-plan-dev.result == 'success' && needs.manual-approval-dev.result == 'success'
     environment: gcp-dev
 
     steps:

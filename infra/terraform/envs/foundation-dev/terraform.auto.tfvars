@@ -14,7 +14,7 @@ images_bucket_name = "livemenu-foundation-dev-images-proyecto-devsecops-493813"
 frontend_cloud_run_service_name = ""
 
 frontend_image = "us-central1-docker.pkg.dev/proyecto-devsecops-493813/cloud-run-source-deploy/livemenu-foundation-dev-frontend@sha256:67201c18d74f50f6493843229c21a86922008b9e44f5dfe5d8427618e14ba0b2"
-backend_image  = "us-central1-docker.pkg.dev/proyecto-devsecops-493813/cloud-run-source-deploy/livemenu-foundation-dev-backend@sha256:18d8858f96ec5f27b8ec49c4fded6b791e3ed4274f0ad6ff7fe3cbc67bb21566"
+backend_image  = "us-central1-docker.pkg.dev/proyecto-devsecops-493813/cloud-run-source-deploy/livemenu-foundation-dev-backend@sha256:b03c40fc8a896793c45e7fd158b7d11e9353520947c4b7273d872bdd85c2e621"
 
 allow_frontend_unauthenticated = true
 allow_backend_unauthenticated  = false
