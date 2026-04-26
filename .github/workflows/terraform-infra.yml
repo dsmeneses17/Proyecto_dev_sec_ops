@@ -84,6 +84,8 @@ jobs:
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: |
+          IGNORED_DRIFT_ADDRESSES='["google_storage_bucket_object.rotate_secret_source"]'
+
           set +e
           terraform plan -refresh-only -detailed-exitcode -out=refresh.tfplan
           rc=$?
@@ -99,9 +101,16 @@ jobs:
             terraform show -no-color refresh.tfplan > refresh-plan.txt
             terraform show -json refresh.tfplan > refresh-plan.json
 
-            actionable_count=$(jq '[
+            actionable_count=$(jq --argjson ignored "$IGNORED_DRIFT_ADDRESSES" '[
               .resource_changes[]?
               | select((.change.before == null and .change.after != null) or (.change.before != null and .change.after == null))
+              | select((.address as $addr | ($ignored | index($addr))) == null)
+            ] | length' refresh-plan.json)
+
+            ignored_count=$(jq --argjson ignored "$IGNORED_DRIFT_ADDRESSES" '[
+              .resource_changes[]?
+              | select((.change.before == null and .change.after != null) or (.change.before != null and .change.after == null))
+              | select((.address as $addr | ($ignored | index($addr))) != null)
             ] | length' refresh-plan.json)
 
             if [ "$actionable_count" -gt 0 ]; then
@@ -109,7 +118,7 @@ jobs:
               echo "Actionable drift detected (${actionable_count} resource changes with create/delete semantics)."
             else
               echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
-              echo "Informational drift only (provider/runtime metadata churn)."
+              echo "Informational drift only (provider/runtime metadata churn and/or ignored ephemeral resources)."
             fi
 
             {
@@ -117,6 +126,8 @@ jobs:
               echo "- drift_detected: true"
               echo "- actionable_drift_detected: $([ "$actionable_count" -gt 0 ] && echo true || echo false)"
               echo "- actionable_count: ${actionable_count}"
+              echo "- ignored_actionable_count: ${ignored_count}"
+              echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "drift_detected=false" >> "$GITHUB_OUTPUT"
@@ -127,6 +138,8 @@ jobs:
               echo "- drift_detected: false"
               echo "- actionable_drift_detected: false"
               echo "- actionable_count: 0"
+              echo "- ignored_actionable_count: 0"
+              echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 

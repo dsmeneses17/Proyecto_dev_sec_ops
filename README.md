@@ -233,6 +233,7 @@ Reglas de drift:
 - Si hay drift accionable en PR o en ejecuciones que no son `push` a `main`, el pipeline falla para forzar investigacion.
 - Si hay drift accionable en `push` a `main`, se exige aprobacion manual adicional (`manual-approval-drift-dev`) antes del plan/apply.
 - El reporte conserva drift informativo (metadata de proveedor/runtime) para observabilidad, pero no bloquea por si solo.
+- Se ignora de forma explicita `google_storage_bucket_object.rotate_secret_source` en el conteo de drift accionable por ser artefacto efimero de empaquetado de Cloud Function.
 
 ### Habilitar auditoria de objetos en Cloud Storage (Data Access)
 
