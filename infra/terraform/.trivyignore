@@ -1,0 +1,8 @@
+# Accepted risks for current foundation-dev architecture.
+# Keep this file minimal and review regularly.
+
+# Cloud SQL currently requires public IPv4 enabled in this environment.
+GCP-0017
+
+# rotate-secret function uses project-level admin roles by design (to rotate secrets, update Cloud SQL user and refresh Cloud Run).
+GCP-0007

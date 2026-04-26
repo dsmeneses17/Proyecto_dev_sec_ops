@@ -82,6 +82,7 @@ jobs:
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: terraform plan -out=tfplan
 
@@ -108,6 +109,8 @@ jobs:
         with:
           scan-type: config
           scan-ref: infra/terraform
+          trivyignores: infra/terraform/.trivyignore
+          tf-vars: infra/terraform/envs/foundation-dev/terraform.auto.tfvars
           severity: HIGH,CRITICAL
           exit-code: 1
           format: table
@@ -224,5 +227,6 @@ jobs:
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: terraform apply -auto-approve tfplan
