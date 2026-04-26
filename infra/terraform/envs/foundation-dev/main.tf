@@ -3,6 +3,9 @@ locals {
   root_domain        = trimsuffix(var.dns_domain, ".")
   frontend_fqdn      = "${var.frontend_subdomain}.${trimsuffix(var.dns_domain, ".")}"
   images_bucket_name = length(trimspace(var.images_bucket_name)) > 0 ? var.images_bucket_name : "${local.prefix}-images-${var.project_id}"
+  db_password_effective = length(trimspace(var.db_password)) > 0 ? var.db_password : (
+    var.create_cloud_sql ? data.google_secret_manager_secret_version.db_password[0].secret_data : ""
+  )
 
   backend_env_vars = merge(
     var.backend_env_vars,
@@ -33,6 +36,14 @@ locals {
   }
 
   rotate_secret_source_dir = "${path.module}/functions/rotate_secret"
+}
+
+data "google_secret_manager_secret_version" "db_password" {
+  count = var.create_cloud_sql && length(trimspace(var.db_password)) == 0 ? 1 : 0
+
+  project = var.project_id
+  secret  = var.db_password_secret_name
+  version = var.secret_version
 }
 
 data "archive_file" "rotate_secret_zip" {
@@ -506,7 +517,7 @@ module "cloud_sql" {
   deletion_protection = true
   database_name       = var.db_name
   database_user       = var.db_user
-  database_password   = var.db_password
+  database_password   = local.db_password_effective
 
   depends_on = [google_project_service.required]
 }

@@ -129,7 +129,7 @@ docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crea
 | `POSTGRES_USER` | Usuario PostgreSQL para despliegue local/compose. |
 | `POSTGRES_PASSWORD` | Password PostgreSQL para despliegue local/compose. |
 | `POSTGRES_DB` | Nombre de base de datos PostgreSQL para despliegue local/compose. |
-| `TF_VAR_DB_PASSWORD` | Password de Cloud SQL inyectada a Terraform como variable sensible. |
+| `TF_VAR_DB_PASSWORD` | Opcional/legado: override de password Cloud SQL. Por defecto Terraform toma `db-password` desde Secret Manager. |
 | `TF_VAR_JWT_SECRET` | Secreto JWT inyectado a Terraform como variable sensible. |
 
 ### GitHub Variables (Repository/Environment Variables)
@@ -144,6 +144,14 @@ docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crea
 | `TF_STATE_BUCKET` | Bucket remoto del estado Terraform. |
 | `TF_STATE_PREFIX_DEV` | Prefijo de estado para entorno dev/foundation-dev. |
 | `TF_VAR_SUBNETS` | Mapa de subredes consumido por Terraform (`var.subnets`). |
+
+### Terraform local (secretos)
+
+- Mantener variables no sensibles en `infra/terraform/envs/foundation-dev/terraform.auto.tfvars`.
+- Mantener secretos locales fuera de git en `infra/terraform/envs/foundation-dev/terraform.local.tfvars`.
+- Usar como plantilla `infra/terraform/envs/foundation-dev/terraform.secrets.example.tfvars`.
+- `infra/terraform/.gitignore` ignora `terraform.local.tfvars`, `terraform.tfvars` y `*.secrets.tfvars`.
+- Para plan local alineado con CI, exportar secretos por entorno o usar `-var-file=terraform.local.tfvars` de forma explicita.
 
 ### Variables de aplicacion (runtime)
 
@@ -214,7 +222,9 @@ Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
 - `plan-dev`: init, validate y plan de Terraform para foundation-dev.
 - `security-scan-dev`: escaneo IaC con Trivy y bloqueo por severidad HIGH/CRITICAL.
-- `apply-dev`: aplica Terraform en push a main, condicionado a plan y escaneo exitosos.
+- `validate-plan-dev`: valida el plan y bloquea cambios destructivos.
+- `manual-approval-dev`: requiere aprobacion manual explicita antes de aplicar.
+- `apply-dev`: aplica Terraform en push a main solo si plan, escaneo, validacion y aprobacion manual fueron exitosos.
 
 ## Backup y restauracion
 
