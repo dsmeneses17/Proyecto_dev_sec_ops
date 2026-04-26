@@ -14,10 +14,12 @@ Plataforma de menu digital para restaurantes con frontend web, API REST y despli
 - [Testing](docs/TESTING.md)
 
 ## Docs entrega 2
-- [Seguridad](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/SEGURIDAD.md)
+- [Documentacion principal](docs/DOCUMENTACION_PROYECTO.md)
+- [Estrategia de Seguridad](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/Seguridad/ESTRATEGIA_SEGURIDAD.md)
+- [Reporte vulnerabilidades Backend](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/Seguridad/Report%20Vulneravilidades%20-%20livemenu-foundation-dev-backend.pdf)
+- [Reporte vulnerabilidades Frontend](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/Seguridad/Reporte%20Vulnerabilidades%20-%20livemenu-foundation-dev-frontend.pdf)
 - [Arquitectura GCP](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/ARQUITECTURA_GCP_ENTREGA2.md)
 - [Arquitectura GCP PNG](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/arquitectura_gcp_actual.png)
-
 
 ## Estado actual del proyecto
 
