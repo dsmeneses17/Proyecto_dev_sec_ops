@@ -17,18 +17,14 @@ from app.utils.slug import generate_unique_slug
 
 router = APIRouter(
     prefix="",  # Sin prefijo aquí
-    tags=["restaurantes"]
+    tags=["restaurantes"],
 )
 
+
 @router.get("", response_model=RestaurantOut)
-def get_my_restaurant(
-    user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+def get_my_restaurant(user=Depends(get_current_user), db: Session = Depends(get_db)):
     print("llego a api resturanr")
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.admin_id == user["id"]
-    ).first()
+    restaurant = db.query(Restaurant).filter(Restaurant.admin_id == user["id"]).first()
 
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
@@ -36,13 +32,11 @@ def get_my_restaurant(
     return restaurant
 
 
-
-
 @router.get("/restaurant/{restaurant_id}", response_model=RestaurantOut)
 def get_restaurant_by_id(
     restaurant_id: UUID = Path(..., description="ID del restaurante a consultar"),
     user=Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Obtener un restaurante específico por su ID.
@@ -53,18 +47,15 @@ def get_restaurant_by_id(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
 
-    #restringir acceso solo al admin dueño del restaurante
+    # restringir acceso solo al admin dueño del restaurante
     if restaurant.admin_id != user["id"] and user["rol"].lower() != "admin":
         raise HTTPException(status_code=403, detail="No autorizado para ver este restaurante")
 
     return restaurant
 
+
 @router.post("/restaurant", response_model=RestaurantOut)
-def create_or_update_restaurant(
-    data: RestaurantCreate,
-    user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+def create_or_update_restaurant(data: RestaurantCreate, user=Depends(get_current_user), db: Session = Depends(get_db)):
     print(f"token admin_restaurante: {user}")
     print(f"datos que llegan: {data.dict()}")
 
@@ -77,16 +68,10 @@ def create_or_update_restaurant(
 
     # 🔹 UPDATE
     if data.id:
-        restaurant = db.query(Restaurant).filter(
-            Restaurant.id == data.id,
-            Restaurant.admin_id == user["id"]
-        ).first()
+        restaurant = db.query(Restaurant).filter(Restaurant.id == data.id, Restaurant.admin_id == user["id"]).first()
 
         if not restaurant:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Restaurante con id {data.id} no existe"
-            )
+            raise HTTPException(status_code=404, detail=f"Restaurante con id {data.id} no existe")
 
         # If slug is empty/None, keep the existing slug
         if not data_dict.get("slug"):
@@ -101,24 +86,16 @@ def create_or_update_restaurant(
         return restaurant
 
     # CREATE
-    existing = db.query(Restaurant).filter(
-        Restaurant.admin_id == user["id"]
-    ).first()
+    existing = db.query(Restaurant).filter(Restaurant.admin_id == user["id"]).first()
 
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Este usuario ya tiene un restaurante"
-        )
+        raise HTTPException(status_code=400, detail="Este usuario ya tiene un restaurante")
 
     # Auto-generate slug if not provided
     if not data_dict.get("slug"):
         data_dict["slug"] = generate_unique_slug(db, data.nombre)
 
-    restaurant = Restaurant(
-        **data_dict,
-        admin_id=user["id"]
-    )
+    restaurant = Restaurant(**data_dict, admin_id=user["id"])
 
     db.add(restaurant)
     db.commit()
@@ -127,14 +104,8 @@ def create_or_update_restaurant(
 
 
 @router.put("/restaurant", response_model=RestaurantOut)
-def update_restaurant(
-    data: RestaurantUpdate,
-    user=Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    restaurant = db.query(Restaurant).filter(
-        Restaurant.admin_id == user["id"]
-    ).first()
+def update_restaurant(data: RestaurantUpdate, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    restaurant = db.query(Restaurant).filter(Restaurant.admin_id == user["id"]).first()
 
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurante no encontrado")
@@ -151,7 +122,7 @@ def update_restaurant(
 def delete_restaurant(
     restaurant_id: UUID = Path(..., description="ID del restaurante a eliminar"),
     user=Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
 

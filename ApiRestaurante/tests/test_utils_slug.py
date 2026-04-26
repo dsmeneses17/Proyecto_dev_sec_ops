@@ -11,6 +11,7 @@ pytestmark = pytest.mark.no_db
 
 # ── slugify (pure function, no DB) ──────────────────────────────────────────
 
+
 class TestSlugify:
     def test_basic(self):
         assert slugify("Mi Restaurante") == "mi-restaurante"
@@ -42,6 +43,7 @@ class TestSlugify:
 
 
 # ── generate_unique_slug (needs DB mock) ────────────────────────────────────
+
 
 class TestGenerateUniqueSlug:
     def _mock_db(self, existing_slugs: set[str]):

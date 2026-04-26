@@ -28,7 +28,7 @@ class MenuView(Base):
 
     # Optional metadata
     user_agent = Column(String(512), nullable=True)
-    ip_hash = Column(String(64), nullable=True)      # SHA-256 of the real IP (anonymised)
-    referrer = Column(String(512), nullable=True)     # HTTP Referer header
+    ip_hash = Column(String(64), nullable=True)  # SHA-256 of the real IP (anonymised)
+    referrer = Column(String(512), nullable=True)  # HTTP Referer header
 
     viewed_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False, index=True)

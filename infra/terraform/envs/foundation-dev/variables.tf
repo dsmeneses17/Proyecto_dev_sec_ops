@@ -18,12 +18,6 @@ variable "create_cloud_run" {
   default     = false
 }
 
-variable "manage_rotate_secret_function" {
-  description = "Si true, Terraform gestiona la funcion Gen1 rotate-secret. Por defecto se desactiva para evitar conflicto con funciones Gen2 existentes"
-  type        = bool
-  default     = false
-}
-
 variable "create_storage" {
   description = "Si true, crea bucket de imagenes en Cloud Storage"
   type        = bool
@@ -243,13 +237,8 @@ variable "db_user" {
 }
 
 variable "db_password" {
-  description = "Contraseña del usuario de la base de datos"
+  description = "Override opcional local para la contraseña de DB. Si esta vacia, Terraform usa Secret Manager (db_password_secret_name + secret_version)."
   type        = string
   sensitive   = true
   default     = ""
-
-  validation {
-    condition     = !var.create_cloud_sql || length(trimspace(var.db_password)) > 0
-    error_message = "Debes definir db_password cuando create_cloud_sql=true."
-  }
 }

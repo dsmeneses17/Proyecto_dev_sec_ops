@@ -11,6 +11,7 @@ class CategoriaBase(BaseModel):
     activa: bool | None = Field(default=True, description="Si la categoría está activa")
     restaurante_id: UUID | None = None
 
+
 class CategoriaCreate(CategoriaBase):
     restaurante_id: UUID | None = None
     id: UUID | None = None
@@ -21,6 +22,7 @@ class CategoriaUpdate(BaseModel):
     descripcion: str | None = None
     posicion: int | None = None
     activa: bool | None = None
+
 
 class CategoriaOut(CategoriaBase):
     id: UUID

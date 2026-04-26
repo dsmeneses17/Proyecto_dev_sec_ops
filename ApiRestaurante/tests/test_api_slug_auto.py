@@ -16,6 +16,7 @@ def _unique(prefix: str = "rf06") -> str:
 
 # ── POST /api/v1/auth/register-owner ─────────────────────────────────────────
 
+
 def test_register_owner_auto_slug(client):
     """Slug omitted → backend generates it from restaurant name."""
     u = _unique()

@@ -32,12 +32,7 @@ def listar(request: Request):
     categorias = list_categorias(token)
     return templates.TemplateResponse(
         "categoria_form.html",
-        {
-            "request": request,
-            "categorias": categorias,
-            "categoria": None,
-            **get_template_context(request)
-        }
+        {"request": request, "categorias": categorias, "categoria": None, **get_template_context(request)},
     )
 
 
@@ -54,8 +49,10 @@ def listar_categorias_json(request: Request):
         return JSONResponse(content=data)
     except Exception:
         import traceback
+
         traceback.print_exc()
         return JSONResponse(content={"error": "No se pudieron cargar las categorías"}, status_code=500)
+
 
 @router.get("/{categoria_id}", response_class=HTMLResponse)
 def editar_form(request: Request, categoria_id: str):
@@ -69,13 +66,9 @@ def editar_form(request: Request, categoria_id: str):
     categorias = list_categorias(token)
     return templates.TemplateResponse(
         "categoria_form.html",
-        {
-            "request": request,
-            "categorias": categorias,
-            "categoria": categoria,
-            **get_template_context(request)
-        }
+        {"request": request, "categorias": categorias, "categoria": categoria, **get_template_context(request)},
     )
+
 
 @router.post("", response_class=HTMLResponse)
 def crear(
@@ -84,7 +77,7 @@ def crear(
     descripcion: str | None = Form(None),
     posicion: int = Form(...),
     activa: bool | None = Form(False),
-    categoriaId: str | None = Form(None)
+    categoriaId: str | None = Form(None),
 ):
 
     token = request.cookies.get("access_token")
@@ -113,9 +106,8 @@ def crear(
         "descripcion": descripcion,
         "posicion": posicion,
         "activa": activa,
-        "restaurante_id": restaurante_id
+        "restaurante_id": restaurante_id,
     }
-
 
     if categoriaId:
         resultado = update_categoria(token, categoriaId, payload)
@@ -131,7 +123,8 @@ def crear(
                 "request": request,
                 "categorias": categorias,
                 "error": resultado["detalle"],
-                **get_template_context(request)}
+                **get_template_context(request),
+            },
         )
 
     return templates.TemplateResponse(
@@ -140,9 +133,10 @@ def crear(
             "request": request,
             "categorias": categorias,
             "success": "Operación realizada correctamente",
-            **get_template_context(request)},
-
+            **get_template_context(request),
+        },
     )
+
 
 @router.post("/editar/{categoria_id}", response_class=HTMLResponse)
 def editar(
@@ -157,12 +151,7 @@ def editar(
     if not token:
         raise HTTPException(status_code=401, detail="Token requerido")
 
-    payload = {
-        "nombre": nombre,
-        "descripcion": descripcion,
-        "posicion": posicion,
-        "activa": activa
-    }
+    payload = {"nombre": nombre, "descripcion": descripcion, "posicion": posicion, "activa": activa}
 
     resultado = update_categoria(token, categoria_id, payload)
     categorias = list_categorias(token)
@@ -174,8 +163,8 @@ def editar(
                 "request": request,
                 "categorias": categorias,
                 "error": resultado["detalle"],
-                **get_template_context(request)
-            }
+                **get_template_context(request),
+            },
         )
 
     return templates.TemplateResponse(
@@ -184,8 +173,8 @@ def editar(
             "request": request,
             "categorias": categorias,
             "success": "Categoría actualizada correctamente",
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )
 
 
@@ -205,8 +194,8 @@ def eliminar(request: Request, categoria_id: str):
                 "request": request,
                 "categorias": categorias,
                 "error": resultado["detalle"],
-                **get_template_context(request)
-            }
+                **get_template_context(request),
+            },
         )
 
     return templates.TemplateResponse(
@@ -215,6 +204,6 @@ def eliminar(request: Request, categoria_id: str):
             "request": request,
             "categorias": categorias,
             "success": "Categoría eliminada correctamente",
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )

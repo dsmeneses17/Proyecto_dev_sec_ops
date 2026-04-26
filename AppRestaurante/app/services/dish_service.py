@@ -29,8 +29,10 @@ def list_dishes(token: str, categoria_id: str = None):
         if response.status_code != 200:
             return {
                 "error": True,
-                "detalle": response.json() if "application/json" in response.headers.get("content-type", "") else response.text,
-                "status_code": response.status_code
+                "detalle": response.json()
+                if "application/json" in response.headers.get("content-type", "")
+                else response.text,
+                "status_code": response.status_code,
             }
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -51,24 +53,14 @@ def get_dish(token: str, dish_id: str):
 
 
 def create_dish(token: str, payload: dict):
-    response = requests.post(
-        BACKEND_URL,
-        json=payload,
-        headers=get_headers(token),
-        timeout=10
-    )
+    response = requests.post(BACKEND_URL, json=payload, headers=get_headers(token), timeout=10)
     if response.status_code not in [200, 201]:
         return {"error": True, "detalle": response.text, "status_code": response.status_code}
     return response.json()
 
 
 def update_dish(token: str, dish_id: str, payload: dict):
-    response = requests.put(
-        f"{BACKEND_URL}{dish_id}",
-        json=payload,
-        headers=get_headers(token),
-        timeout=10
-    )
+    response = requests.put(f"{BACKEND_URL}{dish_id}", json=payload, headers=get_headers(token), timeout=10)
     if response.status_code != 200:
         return {"error": True, "detalle": response.text, "status_code": response.status_code}
     return response.json()

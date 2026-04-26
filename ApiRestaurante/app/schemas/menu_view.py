@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class MenuViewCreate(BaseModel):
     """Payload sent by the frontend when a public menu page is loaded."""
+
     slug: str = Field(..., max_length=120)
     source: str = Field("menu", max_length=20, pattern=r"^(menu|qr|direct)$")
 
@@ -30,18 +31,21 @@ class MenuViewOut(BaseModel):
 
 class MenuViewDailyStat(BaseModel):
     """One data-point: views on a given date."""
+
     date: str  # YYYY-MM-DD
     views: int
 
 
 class MenuViewHourlyStat(BaseModel):
     """Views grouped by hour of the day (0-23)."""
+
     hour: int
     views: int
 
 
 class DeviceStat(BaseModel):
     """Aggregated device / browser breakdown."""
+
     name: str
     count: int
     percentage: float
@@ -49,6 +53,7 @@ class DeviceStat(BaseModel):
 
 class MenuViewStats(BaseModel):
     """Aggregated analytics returned to the restaurant admin."""
+
     restaurant_id: str
     slug: str
     total_views: int
@@ -62,6 +67,6 @@ class MenuViewStats(BaseModel):
     device_breakdown: list[DeviceStat] = []
     browser_breakdown: list[DeviceStat] = []
     # RF24 – date-range metadata (only present when a custom range is used)
-    start_date: str | None = None   # YYYY-MM-DD
-    end_date: str | None = None     # YYYY-MM-DD
+    start_date: str | None = None  # YYYY-MM-DD
+    end_date: str | None = None  # YYYY-MM-DD
     filtered_views: int | None = None

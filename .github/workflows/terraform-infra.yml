@@ -19,16 +19,22 @@ concurrency:
 permissions:
   contents: read
   id-token: write
+  issues: write
 
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
   TF_WORKING_DIR: infra/terraform/envs/foundation-dev
+  TF_VERSION: "1.14.9"
 
 jobs:
-  plan-dev:
-    name: Terraform plan (foundation-dev)
+  drift-check-dev:
+    name: Drift check (refresh-only, foundation-dev)
     runs-on: ubuntu-latest
+
+    outputs:
+      drift_detected: ${{ steps.refresh_plan.outputs.drift_detected }}
+      actionable_drift_detected: ${{ steps.refresh_plan.outputs.actionable_drift_detected }}
 
     steps:
       - name: Checkout
@@ -42,6 +48,8 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Configure backend block for CI
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -58,41 +66,175 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
-            -upgrade
+            -lockfile=readonly
 
-      - name: Adopt existing foundation resources into state (idempotent)
+      - name: Query remote Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "commit_sha=${GITHUB_SHA}"
+          echo "ref_name=${GITHUB_REF}"
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend before drift check:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
+
+      - name: Terraform refresh-only plan (detect drift)
+        id: refresh_plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: |
-          set -euo pipefail
+          IGNORED_DRIFT_ADDRESSES='["google_storage_bucket_object.rotate_secret_source"]'
 
-          import_if_missing() {
-            local address="$1"
-            local import_id="$2"
+          set +e
+          terraform plan -refresh-only -detailed-exitcode -out=refresh.tfplan
+          rc=$?
+          set -e
 
-            if terraform state show "$address" >/dev/null 2>&1; then
-              echo "State already contains $address"
-              return 0
-            fi
+          if [ "$rc" -eq 1 ]; then
+            echo "Terraform refresh-only plan failed"
+            exit 1
+          fi
 
-            echo "Importing $address from $import_id"
-            if terraform import "$address" "$import_id"; then
-              echo "Imported $address"
+          if [ "$rc" -eq 2 ]; then
+            echo "drift_detected=true" >> "$GITHUB_OUTPUT"
+            terraform show -no-color refresh.tfplan > refresh-plan.txt
+            terraform show -json refresh.tfplan > refresh-plan.json
+
+            actionable_count=$(jq --argjson ignored "$IGNORED_DRIFT_ADDRESSES" '[
+              .resource_changes[]?
+              | select((.change.before == null and .change.after != null) or (.change.before != null and .change.after == null))
+              | select((.address as $addr | ($ignored | index($addr))) == null)
+            ] | length' refresh-plan.json)
+
+            ignored_count=$(jq --argjson ignored "$IGNORED_DRIFT_ADDRESSES" '[
+              .resource_changes[]?
+              | select((.change.before == null and .change.after != null) or (.change.before != null and .change.after == null))
+              | select((.address as $addr | ($ignored | index($addr))) != null)
+            ] | length' refresh-plan.json)
+
+            if [ "$actionable_count" -gt 0 ]; then
+              echo "actionable_drift_detected=true" >> "$GITHUB_OUTPUT"
+              echo "Actionable drift detected (${actionable_count} resource changes with create/delete semantics)."
             else
-              echo "::warning::Could not import $address (it may not exist yet)."
+              echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
+              echo "Informational drift only (provider/runtime metadata churn and/or ignored ephemeral resources)."
+
+              if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+                echo "Reconciling informational drift into Terraform state (refresh-only apply)."
+                terraform apply -refresh-only -auto-approve refresh.tfplan
+                echo "informational_drift_reconciled=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "informational_drift_reconciled=false" >> "$GITHUB_OUTPUT"
+              fi
             fi
+
+            {
+              echo "## Drift Check Summary"
+              echo "- drift_detected: true"
+              echo "- actionable_drift_detected: $([ "$actionable_count" -gt 0 ] && echo true || echo false)"
+              echo "- actionable_count: ${actionable_count}"
+              echo "- ignored_actionable_count: ${ignored_count}"
+              echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
+              echo "- informational_drift_reconciled: $([ "$actionable_count" -eq 0 ] && [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && echo true || echo false)"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "drift_detected=false" >> "$GITHUB_OUTPUT"
+            echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
+            echo "informational_drift_reconciled=false" >> "$GITHUB_OUTPUT"
+            echo "No drift detected." > refresh-plan.txt
+            {
+              echo "## Drift Check Summary"
+              echo "- drift_detected: false"
+              echo "- actionable_drift_detected: false"
+              echo "- actionable_count: 0"
+              echo "- ignored_actionable_count: 0"
+              echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
+              echo "- informational_drift_reconciled: false"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Enforce drift policy for non-main runs
+        if: steps.refresh_plan.outputs.actionable_drift_detected == 'true' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          echo "Actionable drift detected outside push-to-main. Failing this run."
+          echo "Resolve drift with Terraform apply or approve a main run for controlled reconciliation."
+          exit 1
+
+      - name: Upload drift report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-dev-drift-report
+          path: |
+            ${{ env.TF_WORKING_DIR }}/refresh.tfplan
+            ${{ env.TF_WORKING_DIR }}/refresh-plan.txt
+            ${{ env.TF_WORKING_DIR }}/refresh-plan.json
+            ${{ env.TF_WORKING_DIR }}/tfstate.remote.json
+            ${{ env.TF_WORKING_DIR }}/backend.auto.tf
+
+  manual-approval-drift-dev:
+    name: Manual approval when drift is detected
+    runs-on: ubuntu-latest
+    needs: [drift-check-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.drift-check-dev.result == 'success' && needs.drift-check-dev.outputs.actionable_drift_detected == 'true'
+
+    steps:
+      - name: Require explicit approval for drift reconciliation
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ vars.TF_APPLY_APPROVERS != '' && vars.TF_APPLY_APPROVERS || github.actor }}
+          minimum-approvals: 1
+          issue-title: "Terraform drift detected - approval required (foundation-dev)"
+          issue-body: |
+            Terraform detected actionable external drift before plan in foundation-dev.
+            Review artifact terraform-dev-drift-report and approve reconciliation.
+
+  plan-dev:
+    name: Terraform plan (foundation-dev)
+    runs-on: ubuntu-latest
+    needs: [drift-check-dev, manual-approval-drift-dev]
+    if: needs.drift-check-dev.result == 'success' && (needs.manual-approval-drift-dev.result == 'success' || needs.manual-approval-drift-dev.result == 'skipped')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure backend block for CI
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          cat > backend.auto.tf <<'EOF'
+          terraform {
+            backend "gcs" {}
           }
+          EOF
 
-          PROJECT_ID="${{ vars.GCP_PROJECT_ID }}"
-          ENV_NAME="foundation-dev"
-          PREFIX="livemenu-${ENV_NAME}"
-          BUCKET_NAME="${PREFIX}-images-${PROJECT_ID}"
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
+            -lockfile=readonly
 
-          import_if_missing "module.vpc.google_compute_network.this" "projects/${PROJECT_ID}/global/networks/${PREFIX}-vpc"
-          import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-          import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
-          import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+      - name: Query remote Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
 
       - name: Terraform fmt check
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -105,11 +247,6 @@ jobs:
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_manage_rotate_secret_function: "false"
-          TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
-          TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
         run: terraform plan -out=tfplan
@@ -122,6 +259,7 @@ jobs:
           path: |
             ${{ env.TF_WORKING_DIR }}/tfplan
             ${{ env.TF_WORKING_DIR }}/backend.auto.tf
+
 
   security-scan-dev:
     name: Security scan IaC (block High/Critical)
@@ -136,15 +274,74 @@ jobs:
         with:
           scan-type: config
           scan-ref: infra/terraform
+          trivyignores: infra/terraform/.trivyignore
+          tf-vars: infra/terraform/envs/foundation-dev/terraform.auto.tfvars
           severity: HIGH,CRITICAL
           exit-code: 1
           format: table
 
+  validate-plan-dev:
+    name: Validate Terraform plan (block destructive changes)
+    runs-on: ubuntu-latest
+    needs: [plan-dev]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-dev-plan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init (providers only)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Analyze plan for destructive actions
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform show -json tfplan > tfplan.json
+
+          destroy_count=$(jq '[.resource_changes[]? | select((.change.actions | index("delete")) != null)] | length' tfplan.json)
+          echo "Destructive changes detected: ${destroy_count}"
+
+          if [ "$destroy_count" -gt 0 ]; then
+            echo "Plan contains delete actions. Review required before apply."
+            exit 1
+          fi
+
+          echo "Validation passed: no delete actions found."
+
+  manual-approval-dev:
+    name: Manual approval before apply
+    runs-on: ubuntu-latest
+    needs: [security-scan-dev, validate-plan-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.security-scan-dev.result == 'success' && needs.validate-plan-dev.result == 'success'
+
+    steps:
+      - name: Require explicit approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ vars.TF_APPLY_APPROVERS != '' && vars.TF_APPLY_APPROVERS || github.actor }}
+          minimum-approvals: 1
+          issue-title: "Terraform apply approval required (foundation-dev)"
+          issue-body: |
+            Terraform apply for foundation-dev is waiting for manual approval.
+            Review the plan and approve this request to continue.
+
   apply-dev:
     name: Terraform apply (foundation-dev)
     runs-on: ubuntu-latest
-    needs: [plan-dev, security-scan-dev]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan-dev.result == 'success' && needs.security-scan-dev.result == 'success'
+    needs: [plan-dev, security-scan-dev, validate-plan-dev, manual-approval-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.plan-dev.result == 'success' && needs.security-scan-dev.result == 'success' && needs.validate-plan-dev.result == 'success' && needs.manual-approval-dev.result == 'success'
     environment: gcp-dev
 
     steps:
@@ -159,6 +356,8 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Configure backend block for CI
         working-directory: ${{ env.TF_WORKING_DIR }}
@@ -175,50 +374,24 @@ jobs:
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
-            -upgrade
+            -lockfile=readonly
 
-      - name: Adopt existing foundation resources into state (idempotent)
+      - name: Query remote Terraform state
         working-directory: ${{ env.TF_WORKING_DIR }}
-        env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
         run: |
-          set -euo pipefail
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend before apply:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
 
-          import_if_missing() {
-            local address="$1"
-            local import_id="$2"
-
-            if terraform state show "$address" >/dev/null 2>&1; then
-              echo "State already contains $address"
-              return 0
-            fi
-
-            echo "Importing $address from $import_id"
-            if terraform import "$address" "$import_id"; then
-              echo "Imported $address"
-            else
-              echo "::warning::Could not import $address (it may not exist yet)."
-            fi
-          }
-
-          PROJECT_ID="${{ vars.GCP_PROJECT_ID }}"
-          ENV_NAME="foundation-dev"
-          PREFIX="livemenu-${ENV_NAME}"
-          BUCKET_NAME="${PREFIX}-images-${PROJECT_ID}"
-
-          import_if_missing "module.vpc.google_compute_network.this" "projects/${PROJECT_ID}/global/networks/${PREFIX}-vpc"
-          import_if_missing "google_service_account.worker[0]" "projects/${PROJECT_ID}/serviceAccounts/lm-worker-${ENV_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-          import_if_missing "module.waf[0].google_compute_security_policy.this" "projects/${PROJECT_ID}/global/securityPolicies/${PREFIX}-armor"
-          import_if_missing "module.storage[0].google_storage_bucket.this" "${BUCKET_NAME}"
+      - name: Download approved plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-dev-plan
+          path: ${{ env.TF_WORKING_DIR }}
 
       - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_manage_rotate_secret_function: "false"
-          TF_VAR_frontend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/frontend-api:${{ github.sha }}
-          TF_VAR_backend_image: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/backend-api:${{ github.sha }}
           TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan

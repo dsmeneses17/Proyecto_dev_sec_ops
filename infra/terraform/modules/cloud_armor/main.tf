@@ -73,9 +73,9 @@ resource "google_compute_security_policy" "this" {
     }
 
     rate_limit_options {
+      ban_duration_sec = 300
       conform_action = "allow"
       exceed_action  = "deny(429)"
-      ban_duration_sec = 300
 
       rate_limit_threshold {
         count        = var.rate_limit_count
@@ -83,7 +83,7 @@ resource "google_compute_security_policy" "this" {
       }
 
       ban_threshold {
-        count        = var.rate_limit_count
+        count        = floor(var.rate_limit_count * 1.5)
         interval_sec = var.rate_limit_interval_sec
       }
 

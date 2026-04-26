@@ -32,8 +32,8 @@ def _generate_qr_png_bytes(content: str, fill_color: str = "#000000", back_color
         back_color: Background color (hex code, e.g., "#FFFFFF")
     """
     # Convert hex colors to RGB tuples
-    fill_rgb = tuple(int(fill_color[i:i+2], 16) for i in (1, 3, 5))
-    back_rgb = tuple(int(back_color[i:i+2], 16) for i in (1, 3, 5))
+    fill_rgb = tuple(int(fill_color[i : i + 2], 16) for i in (1, 3, 5))
+    back_rgb = tuple(int(back_color[i : i + 2], 16) for i in (1, 3, 5))
 
     qr = qrcode.QRCode(
         version=1,
@@ -78,7 +78,7 @@ def menu_index(request: Request, slug: str | None = None):
             "request": request,
             "restaurants": restaurants,
             "selected_slug": (slug or "").strip(),
-        }
+        },
     )
 
 
@@ -88,21 +88,13 @@ def ver_menu(request: Request, slug: str):
     menu = get_public_menu(slug)
 
     if not menu:
-        return templates.TemplateResponse(
-            "public/menu_not_found.html",
-            {"request": request}
-        )
+        return templates.TemplateResponse("public/menu_not_found.html", {"request": request})
 
     # RF22 – record this visualisation (fire-and-forget)
     record_menu_view(slug, source="menu")
 
-    return templates.TemplateResponse(
-        "public/menu_public.html",
-        {
-            "request": request,
-            "menu": menu
-        }
-    )
+    return templates.TemplateResponse("public/menu_public.html", {"request": request, "menu": menu})
+
 
 @router.get("/menu/{slug}/qr", response_class=HTMLResponse)
 def generar_qr(request: Request, slug: str):
@@ -110,10 +102,7 @@ def generar_qr(request: Request, slug: str):
     menu = get_public_menu(slug)
 
     if not menu:
-        return templates.TemplateResponse(
-            "public/menu_not_found.html",
-            {"request": request}
-        )
+        return templates.TemplateResponse("public/menu_not_found.html", {"request": request})
 
     # RF22 – record QR-page visualisation
     record_menu_view(slug, source="qr")
@@ -121,8 +110,8 @@ def generar_qr(request: Request, slug: str):
     url_publica = _build_public_menu_url(request, slug)
 
     # Get QR colors from menu data
-    qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, 'qr_color_fg') else "#000000"
-    qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, 'qr_color_bg') else "#FFFFFF"
+    qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, "qr_color_fg") else "#000000"
+    qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, "qr_color_bg") else "#FFFFFF"
 
     png_bytes = _generate_qr_png_bytes(url_publica, fill_color=qr_color_fg, back_color=qr_color_bg)
     img_str = base64.b64encode(png_bytes).decode()
@@ -133,6 +122,7 @@ def generar_qr(request: Request, slug: str):
     if token:
         try:
             from app.core.security import decode_token
+
             payload = decode_token(token)
             if payload and "restaurant_id" in payload:
                 is_owner = str(menu.restaurant.id) == str(payload["restaurant_id"])
@@ -151,7 +141,7 @@ def generar_qr(request: Request, slug: str):
             "qr_color_fg": qr_color_fg,
             "qr_color_bg": qr_color_bg,
             "is_owner": is_owner,
-        }
+        },
     )
 
 
@@ -160,16 +150,13 @@ def exportar_qr_png(request: Request, slug: str):
     menu = get_public_menu(slug)
 
     if not menu:
-        return templates.TemplateResponse(
-            "public/menu_not_found.html",
-            {"request": request}
-        )
+        return templates.TemplateResponse("public/menu_not_found.html", {"request": request})
 
     url_publica = _build_public_menu_url(request, slug)
 
     # Get QR colors from menu data
-    qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, 'qr_color_fg') else "#000000"
-    qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, 'qr_color_bg') else "#FFFFFF"
+    qr_color_fg = menu.restaurant.qr_color_fg if hasattr(menu.restaurant, "qr_color_fg") else "#000000"
+    qr_color_bg = menu.restaurant.qr_color_bg if hasattr(menu.restaurant, "qr_color_bg") else "#FFFFFF"
 
     png_bytes = _generate_qr_png_bytes(url_publica, fill_color=qr_color_fg, back_color=qr_color_bg)
     safe_slug = slug.replace(" ", "-")
@@ -190,7 +177,6 @@ def exportar_qr_svg(request: Request, slug: str):
         media_type="image/svg+xml",
         headers={"Content-Disposition": f'attachment; filename="menu-{safe_slug}-qr.svg"'},
     )
-
 
 
 @router.post("/qr-colors/{slug}")
@@ -220,6 +206,7 @@ async def update_qr_colors(request: Request, slug: str):
     # Delegate to service
     try:
         from app.services.qr_color_service import process_qr_color_update
+
         result = process_qr_color_update(token, slug, qr_color_fg, qr_color_bg)
     except Exception as exc:
         logging.error("[QR_COLORS] Service error: %s", exc)

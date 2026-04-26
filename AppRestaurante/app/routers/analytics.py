@@ -6,8 +6,8 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from app.core.config import settings
-from app.services.backend_auth import request_backend
 from app.services.analytics_service import get_analytics_stats
+from app.services.backend_auth import request_backend
 from app.ui.templates import templates
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])

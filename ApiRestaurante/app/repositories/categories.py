@@ -10,12 +10,7 @@ def get_by_id(db: Session, category_id) -> Category | None:
 
 
 def list_by_restaurant_id(db: Session, restaurant_id) -> list[Category]:
-    return (
-        db.query(Category)
-        .filter(Category.restaurante_id == restaurant_id)
-        .order_by(Category.posicion.asc())
-        .all()
-    )
+    return db.query(Category).filter(Category.restaurante_id == restaurant_id).order_by(Category.posicion.asc()).all()
 
 
 def create(

@@ -35,15 +35,18 @@ class UserCreate(BaseModel):
             raise ValueError("La contraseña debe tener al menos 6 caracteres")
         return v
 
+
 # Para login
 class UserLogin(BaseModel):
     usuario: str
     password: str
 
+
 # Para devolver token
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 # Opcional: para devolver datos del usuario
 class UserOut(BaseModel):

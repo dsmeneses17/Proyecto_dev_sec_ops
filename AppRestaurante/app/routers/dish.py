@@ -12,6 +12,7 @@ from app.utils.templates import get_template_context
 
 router = APIRouter(tags=["platos"])
 
+
 def _safe_cookie_value(value: str | None):
     if value in [None, "", "None", "null"]:
         return None
@@ -81,8 +82,8 @@ def listar(request: Request):
             "plato": None,
             "error": error,
             "success": None,
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )
 
 
@@ -112,8 +113,8 @@ def editar_form(request: Request, dish_id: str):
             "plato": plato,
             "error": None,
             "success": None,
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )
 
 
@@ -131,7 +132,7 @@ def crear(
     etiquetas: list[str] | None = Form(None),
     etiquetas_manual: str | None = Form(None),
     posicion: int | None = Form(None),
-    plato_id: str | None = Form(None)
+    plato_id: str | None = Form(None),
 ):
     """
     Crea o actualiza un plato
@@ -170,7 +171,7 @@ def crear(
         "destacado": destacado,
         "etiquetas": _parse_tags(etiquetas, etiquetas_manual),
         "posicion": posicion,
-        "restaurante_id": restaurante_id
+        "restaurante_id": restaurante_id,
     }
 
     if plato_id:
@@ -191,8 +192,8 @@ def crear(
             "plato": None,
             "error": resultado.get("detalle") if "error" in resultado else None,
             "success": None if "error" in resultado else "Operación realizada correctamente",
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )
 
 
@@ -219,8 +220,8 @@ def eliminar(request: Request, dish_id: str):
             "plato": None,
             "error": resultado.get("detalle") if "error" in resultado else None,
             "success": None if "error" in resultado else "Plato eliminado correctamente",
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )
 
 
@@ -244,6 +245,6 @@ def toggle(request: Request, dish_id: str):
             "plato": None,
             "error": resultado.get("detalle") if "error" in resultado else None,
             "success": "Disponibilidad actualizada" if "error" not in resultado else None,
-            **get_template_context(request)
-        }
+            **get_template_context(request),
+        },
     )

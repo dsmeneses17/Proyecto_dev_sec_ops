@@ -19,7 +19,6 @@ def _set_auth_cookie(response: RedirectResponse, key: str, value: str, httponly:
     )
 
 
-
 @router.get("/logout")
 def logout():
     response = RedirectResponse(url="/", status_code=303)
@@ -30,13 +29,16 @@ def logout():
     response.delete_cookie("restaurant_slug")
     return response
 
+
 @router.get("/login")
 def mostrar_login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+
 @router.get("/register-client")
 def mostrar_registro_cliente(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
+
 
 @router.post("/register-client")
 def procesar_registro_cliente(
@@ -62,23 +64,21 @@ def procesar_registro_cliente(
     # Registro exitoso → redirigir al login con mensaje de éxito
     return RedirectResponse(url="/api/v1/auth/login?registered=1", status_code=303)
 
+
 @router.post("/login")
 def procesar_login(request: Request, usuario: str = Form(...), password: str = Form(...)):
     resultado = auth_service.autenticar_usuario(usuario, password)
 
     if "error" in resultado:
-        return templates.TemplateResponse(
-            "login.html",
-            {"request": request, "error": resultado["error"]}
-        )
+        return templates.TemplateResponse("login.html", {"request": request, "error": resultado["error"]})
 
     token = resultado["token"]
     rol = resultado["rol"]
     restaurant_id = resultado["restaurant_id"]
     restaurant_slug = resultado["restaurant_slug"]
     user_id = resultado.get("user_id")
-    #breakpoint()
-    #Admin con restaurante registrado → editar restaurante
+    # breakpoint()
+    # Admin con restaurante registrado → editar restaurante
     if rol == "admin":
         redirect = RedirectResponse(url="/restaurants", status_code=303)
         _set_auth_cookie(redirect, "access_token", token, httponly=True)
@@ -87,8 +87,6 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
         _set_auth_cookie(redirect, "restaurant_id", str(restaurant_id))
         _set_auth_cookie(redirect, "restaurant_slug", str(restaurant_slug))
         return redirect
-
-
 
     # Cliente → client dashboard with all restaurants
     if rol == "cliente":
@@ -109,4 +107,3 @@ def procesar_login(request: Request, usuario: str = Form(...), password: str = F
     _set_auth_cookie(redirect, "restaurant_id", str(restaurant_id))
     _set_auth_cookie(redirect, "restaurant_slug", str(restaurant_slug))
     return redirect
-

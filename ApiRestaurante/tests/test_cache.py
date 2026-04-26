@@ -58,6 +58,7 @@ class TestInMemoryCache:
     def test_cache_thread_safety(self):
         """Test that cache operations are thread-safe."""
         import threading
+
         cache = InMemoryCache(ttl_seconds=300)
         results = []
 

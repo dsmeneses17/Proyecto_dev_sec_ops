@@ -1,5 +1,4 @@
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 crash.log
@@ -9,5 +8,7 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 terraform.tfvars
+terraform.local.tfvars
+*.secrets.tfvars
 backend.tf
 *.tfplan

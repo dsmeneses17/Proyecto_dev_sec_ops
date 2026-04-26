@@ -129,7 +129,7 @@ docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crea
 | `POSTGRES_USER` | Usuario PostgreSQL para despliegue local/compose. |
 | `POSTGRES_PASSWORD` | Password PostgreSQL para despliegue local/compose. |
 | `POSTGRES_DB` | Nombre de base de datos PostgreSQL para despliegue local/compose. |
-| `TF_VAR_DB_PASSWORD` | Password de Cloud SQL inyectada a Terraform como variable sensible. |
+| `TF_VAR_DB_PASSWORD` | Opcional/legado: override de password Cloud SQL. Por defecto Terraform toma `db-password` desde Secret Manager. |
 | `TF_VAR_JWT_SECRET` | Secreto JWT inyectado a Terraform como variable sensible. |
 
 ### GitHub Variables (Repository/Environment Variables)
@@ -144,6 +144,14 @@ docker compose --env-file .env exec backend_api python -m app.z_crearTablas.crea
 | `TF_STATE_BUCKET` | Bucket remoto del estado Terraform. |
 | `TF_STATE_PREFIX_DEV` | Prefijo de estado para entorno dev/foundation-dev. |
 | `TF_VAR_SUBNETS` | Mapa de subredes consumido por Terraform (`var.subnets`). |
+
+### Terraform local (secretos)
+
+- Mantener variables no sensibles en `infra/terraform/envs/foundation-dev/terraform.auto.tfvars`.
+- Mantener secretos locales fuera de git en `infra/terraform/envs/foundation-dev/terraform.local.tfvars`.
+- Usar como plantilla `infra/terraform/envs/foundation-dev/terraform.secrets.example.tfvars`.
+- `infra/terraform/.gitignore` ignora `terraform.local.tfvars`, `terraform.tfvars` y `*.secrets.tfvars`.
+- Para plan local alineado con CI, exportar secretos por entorno o usar `-var-file=terraform.local.tfvars` de forma explicita.
 
 ### Variables de aplicacion (runtime)
 
@@ -212,9 +220,59 @@ Archivo: [api-tests.yml](.github/workflows/api-tests.yml)
 
 Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
+- `drift-check-dev`: ejecuta `terraform plan -refresh-only -detailed-exitcode` antes del plan normal, genera reporte de drift y publica artefacto `terraform-dev-drift-report`.
+- `manual-approval-drift-dev`: en `push` a `main`, solicita aprobacion manual si se detecta drift accionable antes de continuar.
 - `plan-dev`: init, validate y plan de Terraform para foundation-dev.
 - `security-scan-dev`: escaneo IaC con Trivy y bloqueo por severidad HIGH/CRITICAL.
-- `apply-dev`: aplica Terraform en push a main, condicionado a plan y escaneo exitosos.
+- `validate-plan-dev`: valida el plan y bloquea cambios destructivos.
+- `manual-approval-dev`: requiere aprobacion manual explicita antes de aplicar.
+- `apply-dev`: aplica Terraform en push a main solo si plan, escaneo, validacion y aprobacion manual fueron exitosos.
+
+Reglas de drift:
+
+- Si hay drift accionable en PR o en ejecuciones que no son `push` a `main`, el pipeline falla para forzar investigacion.
+- Si hay drift accionable en `push` a `main`, se exige aprobacion manual adicional (`manual-approval-drift-dev`) antes del plan/apply.
+- El reporte conserva drift informativo (metadata de proveedor/runtime) para observabilidad, pero no bloquea por si solo.
+- Se ignora de forma explicita `google_storage_bucket_object.rotate_secret_source` en el conteo de drift accionable por ser artefacto efimero de empaquetado de Cloud Function.
+- En `push` a `main`, si solo existe drift informativo (por ejemplo versiones rotadas de secretos), el pipeline ejecuta `terraform apply -refresh-only` para reconciliar estado sin cambiar infraestructura remota.
+
+### Habilitar auditoria de objetos en Cloud Storage (Data Access)
+
+Para identificar quien borra/crea objetos (por ejemplo `rotate_secret_source`) se deben habilitar Data Access logs para Cloud Storage.
+
+```bash
+PROJECT_ID="proyecto-devsecops-493813"
+
+gcloud projects get-iam-policy "$PROJECT_ID" --format=json > /tmp/project-iam-policy.json
+
+jq '
+  .auditConfigs = (
+    ((.auditConfigs // []) | map(select(.service != "storage.googleapis.com")))
+    + [{
+      service: "storage.googleapis.com",
+      auditLogConfigs: [
+        {logType: "DATA_READ"},
+        {logType: "DATA_WRITE"}
+      ]
+    }]
+  )
+' /tmp/project-iam-policy.json > /tmp/project-iam-policy.with-storage-audit.json
+
+gcloud projects set-iam-policy "$PROJECT_ID" /tmp/project-iam-policy.with-storage-audit.json
+```
+
+El flujo anterior preserva los bindings existentes al partir de la policy actual del proyecto.
+
+Consulta recomendada para rastrear actor de drift en bucket de imagenes:
+
+```bash
+gcloud logging read \
+  'protoPayload.serviceName="storage.googleapis.com" AND resource.labels.bucket_name="livemenu-foundation-dev-images-proyecto-devsecops-493813" AND (protoPayload.methodName:"storage.objects.delete" OR protoPayload.methodName:"storage.objects.create" OR protoPayload.methodName:"storage.objects.update")' \
+  --project "$PROJECT_ID" \
+  --freshness=30d \
+  --limit=200 \
+  --format='table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail,protoPayload.requestMetadata.callerSuppliedUserAgent,protoPayload.resourceName)'
+```
 
 ## Backup y restauracion
 

@@ -30,11 +30,7 @@ def _to_absolute_media_url(request: Request, image_ref: str) -> str:
 
 
 @router.post("/image")
-async def upload_image(
-    request: Request,
-    file: UploadFile = File(...),
-    target: str = Query("general")
-):
+async def upload_image(request: Request, file: UploadFile = File(...), target: str = Query("general")):
     token = request.cookies.get("access_token")
     rol = request.cookies.get("rol")
     user_id = request.cookies.get("user_id", "unknown")
@@ -65,10 +61,7 @@ async def upload_image(
             file.content_type,
             sorted(ALLOWED_IMAGE_TYPES),
         )
-        raise HTTPException(
-            status_code=400,
-            detail="Tipo de archivo no permitido. Solo JPEG, PNG o WebP."
-        )
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Solo JPEG, PNG o WebP.")
 
     image_content = await file.read(MAX_IMAGE_SIZE + 1)
     await file.close()

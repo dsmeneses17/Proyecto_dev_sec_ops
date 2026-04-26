@@ -1,5 +1,5 @@
-from functools import lru_cache
 import logging
+from functools import lru_cache
 from urllib.parse import quote, urlparse
 
 import boto3
@@ -8,7 +8,6 @@ from botocore.exceptions import BotoCoreError, ClientError
 from google.cloud import storage
 
 from app.core.config import settings
-
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +97,7 @@ def _extract_object_name_from_url(image_url: str) -> str | None:
         expected_bucket = (settings.GCS_BUCKET_NAME or "").lower()
 
         if host == "storage.googleapis.com" and path.startswith(f"{settings.GCS_BUCKET_NAME}/"):
-            return path[len(settings.GCS_BUCKET_NAME) + 1:]
+            return path[len(settings.GCS_BUCKET_NAME) + 1 :]
 
         if expected_bucket and host == f"{expected_bucket}.storage.googleapis.com":
             return path
@@ -121,7 +120,7 @@ def _extract_object_name_from_url(image_url: str) -> str | None:
 
     if host.startswith("s3.") or host == "s3.amazonaws.com":
         if path.startswith(f"{settings.S3_BUCKET_NAME}/"):
-            return path[len(settings.S3_BUCKET_NAME) + 1:]
+            return path[len(settings.S3_BUCKET_NAME) + 1 :]
 
     return None
 
@@ -137,11 +136,11 @@ def resolve_object_name(image_ref: str) -> str | None:
 
         parsed = urlparse(image_ref)
         if parsed.path.startswith("/media/"):
-            return parsed.path[len("/media/"):]
+            return parsed.path[len("/media/") :]
         return None
 
     if image_ref.startswith("/media/"):
-        return image_ref[len("/media/"):]
+        return image_ref[len("/media/") :]
 
     return image_ref.strip().lstrip("/")
 
@@ -182,7 +181,9 @@ def read_object_from_storage(image_ref: str) -> tuple[bytes, str, str | None]:
     return body, (response.get("ContentType") or "application/octet-stream"), response.get("CacheControl")
 
 
-def upload_bytes_to_object_storage(content: bytes, object_name: str, content_type: str = "application/octet-stream") -> str:
+def upload_bytes_to_object_storage(
+    content: bytes, object_name: str, content_type: str = "application/octet-stream"
+) -> str:
     _assert_storage_configured()
     provider = _provider()
 

@@ -10,11 +10,14 @@ class CategoryBase(BaseModel):
     posicion: Annotated[int, Field(ge=0)]
     activa: bool | None = True
 
+
 class CategoryCreate(CategoryBase):
     restaurante_id: UUID | None = None
 
+
 class CategoryUpdate(CategoryBase):
     pass
+
 
 class CategoryOut(BaseModel):
     id: UUID
@@ -30,5 +33,5 @@ class CategoryOut(BaseModel):
 
 class CategoryReorder(BaseModel):
     """Schema para reordenar categorías."""
-    categorias: list[dict]  # [{"id": "...", "posicion": 1}, ...]
 
+    categorias: list[dict]  # [{"id": "...", "posicion": 1}, ...]

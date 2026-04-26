@@ -3,6 +3,9 @@ locals {
   root_domain        = trimsuffix(var.dns_domain, ".")
   frontend_fqdn      = "${var.frontend_subdomain}.${trimsuffix(var.dns_domain, ".")}"
   images_bucket_name = length(trimspace(var.images_bucket_name)) > 0 ? var.images_bucket_name : "${local.prefix}-images-${var.project_id}"
+  db_password_effective = length(trimspace(var.db_password)) > 0 ? var.db_password : (
+    var.create_cloud_sql ? data.google_secret_manager_secret_version.db_password[0].secret_data : ""
+  )
 
   backend_env_vars = merge(
     var.backend_env_vars,
@@ -31,6 +34,30 @@ locals {
     app = "livemenu"
     env = var.environment
   }
+
+  rotate_secret_source_dir = "${path.module}/functions/rotate_secret"
+}
+
+data "google_secret_manager_secret_version" "db_password" {
+  count = var.create_cloud_sql && length(trimspace(var.db_password)) == 0 ? 1 : 0
+
+  project = var.project_id
+  secret  = var.db_password_secret_name
+  version = var.secret_version
+}
+
+data "archive_file" "rotate_secret_zip" {
+  type        = "zip"
+  source_dir  = local.rotate_secret_source_dir
+  output_path = "${path.module}/.terraform/rotate-secret.zip"
+}
+
+resource "google_storage_bucket_object" "rotate_secret_source" {
+  name   = "functions/rotate-secret-${data.archive_file.rotate_secret_zip.output_md5}.zip"
+  bucket = local.images_bucket_name
+  source = data.archive_file.rotate_secret_zip.output_path
+
+  depends_on = [module.storage]
 }
 
 resource "google_project_service" "required" {
@@ -41,6 +68,7 @@ resource "google_project_service" "required" {
     "cloudresourcemanager.googleapis.com",
     "dns.googleapis.com",
     "cloudfunctions.googleapis.com",
+    "eventarc.googleapis.com",
     "cloudbuild.googleapis.com",
     "pubsub.googleapis.com",
     "sqladmin.googleapis.com",
@@ -79,46 +107,73 @@ resource "google_service_account" "frontend" {
   display_name = "LiveMenu Frontend ${var.environment}"
 }
 
-resource "google_cloudfunctions_function" "rotate_secret" {
-  count = var.manage_rotate_secret_function ? 1 : 0
+import {
+  for_each = var.create_cloud_run ? toset(["backend-sa"]) : toset([])
 
-  name                  = "rotate-secret"
-  project               = var.project_id
-  region                = var.region
-  runtime               = "python311"
-  available_memory_mb   = 256
-  entry_point           = "rotate_secret"
-  service_account_email = "${var.project_id}@appspot.gserviceaccount.com"
-  ingress_settings      = "ALLOW_ALL"
-  max_instances         = 3000
-  timeout               = 60
+  to = google_service_account.backend[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-be-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+}
 
-  source_archive_bucket = "uploads-745023658003.us-central1.cloudfunctions.appspot.com"
-  source_archive_object = "2f0f3352-3114-4813-be22-26043da06431.zip"
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-sa"]) : toset([])
 
-  event_trigger {
-    event_type = "google.pubsub.topic.publish"
-    resource   = "projects/${var.project_id}/topics/secret-rotation-topic"
-    failure_policy {
-      retry = false
+  to = google_service_account.frontend[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-fe-${var.environment}@${var.project_id}.iam.gserviceaccount.com"
+}
+
+resource "google_cloudfunctions2_function" "rotate_secret" {
+  name     = "rotate-secret"
+  project  = var.project_id
+  location = var.region
+
+  build_config {
+    runtime     = "python311"
+    entry_point = "rotate_secret"
+    source {
+      storage_source {
+        bucket = local.images_bucket_name
+        object = google_storage_bucket_object.rotate_secret_source.name
+      }
     }
   }
 
-  labels = {
-    deployment-tool = "cli-gcloud"
+  service_config {
+    available_memory      = "256M"
+    max_instance_count    = 10
+    timeout_seconds       = 60
+    ingress_settings      = "ALLOW_ALL"
+    service_account_email = "${var.project_id}@appspot.gserviceaccount.com"
+
+    environment_variables = {
+      PROJECT_ID              = var.project_id
+      REGION                  = var.region
+      JWT_SECRET_NAME         = var.jwt_secret_name
+      DB_SECRET_NAME          = var.db_password_secret_name
+      CLOUD_SQL_INSTANCE      = var.create_cloud_sql ? module.cloud_sql[0].instance_name : ""
+      CLOUD_SQL_DB_USER       = var.db_user
+      BACKEND_SERVICE_NAME    = var.create_cloud_run ? module.backend[0].name : ""
+      FRONTEND_SERVICE_NAME   = var.create_cloud_run ? module.frontend[0].name : ""
+      FORCE_CLOUD_RUN_REFRESH = var.create_cloud_run ? "true" : "false"
+      ROTATE_DB_USER_PASSWORD = var.create_cloud_sql ? "true" : "false"
+    }
+  }
+
+  event_trigger {
+    trigger_region = var.region
+    event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
+    pubsub_topic   = "projects/${var.project_id}/topics/secret-rotation-topic"
+    retry_policy   = "RETRY_POLICY_DO_NOT_RETRY"
   }
 
   depends_on = [google_project_service.required]
-
-  lifecycle {
-    ignore_changes = [
-      labels,
-      source_archive_bucket,
-      source_archive_object,
-    ]
-  }
 }
 
+import {
+  for_each = toset(["rotate-secret-function"])
+
+  to = google_cloudfunctions2_function.rotate_secret
+  id = "projects/${var.project_id}/locations/${var.region}/functions/rotate-secret"
+}
 
 import {
   to = google_project_service.required["cloudbuild.googleapis.com"]
@@ -194,6 +249,75 @@ resource "google_service_account" "worker" {
   display_name = "LiveMenu Worker ${var.environment}"
 }
 
+resource "google_project_iam_member" "rotate_secret_sa_secret_admin" {
+  project = var.project_id
+  role    = "roles/secretmanager.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = toset(["rotate-secret-secret-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_secret_admin
+  id = "${var.project_id} roles/secretmanager.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "rotate_secret_sa_cloudsql_admin" {
+  project = var.project_id
+  role    = "roles/cloudsql.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = toset(["rotate-secret-cloudsql-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_cloudsql_admin
+  id = "${var.project_id} roles/cloudsql.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "rotate_secret_sa_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = toset(["rotate-secret-run-admin"])
+
+  to = google_project_iam_member.rotate_secret_sa_run_admin
+  id = "${var.project_id} roles/run.admin serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "rotate_secret_backend_sa_user" {
+  count = var.create_cloud_run ? 1 : 0
+
+  service_account_id = google_service_account.backend[0].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["rotate-secret-backend-sa-user"]) : toset([])
+
+  to = google_service_account_iam_member.rotate_secret_backend_sa_user[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-be-${var.environment}@${var.project_id}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+resource "google_service_account_iam_member" "rotate_secret_frontend_sa_user" {
+  count = var.create_cloud_run ? 1 : 0
+
+  service_account_id = google_service_account.frontend[0].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["rotate-secret-frontend-sa-user"]) : toset([])
+
+  to = google_service_account_iam_member.rotate_secret_frontend_sa_user[0]
+  id = "projects/${var.project_id}/serviceAccounts/lm-fe-${var.environment}@${var.project_id}.iam.gserviceaccount.com roles/iam.serviceAccountUser serviceAccount:${var.project_id}@appspot.gserviceaccount.com"
+}
+
 module "storage" {
   count  = var.create_storage ? 1 : 0
   source = "../../modules/storage"
@@ -236,6 +360,13 @@ module "backend" {
   depends_on = [google_project_service.required, module.cloud_sql]
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["backend-cloud-run"]) : toset([])
+
+  to = module.backend[0].google_cloud_run_v2_service.this
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-backend"
+}
+
 resource "google_secret_manager_secret_iam_member" "backend_jwt_accessor" {
   count = var.create_cloud_run ? 1 : 0
 
@@ -264,12 +395,26 @@ resource "google_cloud_run_v2_service_iam_member" "backend_frontend_invoker" {
   member   = "serviceAccount:${google_service_account.frontend[0].email}"
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["backend-frontend-invoker"]) : toset([])
+
+  to = google_cloud_run_v2_service_iam_member.backend_frontend_invoker[0]
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-backend roles/run.invoker serviceAccount:${google_service_account.frontend[0].email}"
+}
+
 resource "google_project_iam_member" "backend_cloud_sql_client" {
   count = (var.create_cloud_run && var.create_cloud_sql) ? 1 : 0
 
   project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.backend[0].email}"
+}
+
+import {
+  for_each = (var.create_cloud_run && var.create_cloud_sql) ? toset(["backend-cloudsql-client"]) : toset([])
+
+  to = google_project_iam_member.backend_cloud_sql_client[0]
+  id = "${var.project_id} roles/cloudsql.client serviceAccount:${google_service_account.backend[0].email}"
 }
 
 resource "google_storage_bucket_iam_member" "backend_object_viewer" {
@@ -326,6 +471,20 @@ module "frontend" {
   depends_on = [google_project_service.required]
 }
 
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-public-invoker"]) : toset([])
+
+  to = module.frontend[0].google_cloud_run_v2_service_iam_member.public_invoker[0]
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-frontend roles/run.invoker allUsers"
+}
+
+import {
+  for_each = var.create_cloud_run ? toset(["frontend-cloud-run"]) : toset([])
+
+  to = module.frontend[0].google_cloud_run_v2_service.this
+  id = "projects/${var.project_id}/locations/${var.region}/services/${local.prefix}-frontend"
+}
+
 resource "google_secret_manager_secret_iam_member" "frontend_jwt_accessor" {
   count = var.create_cloud_run ? 1 : 0
 
@@ -358,9 +517,30 @@ module "cloud_sql" {
   deletion_protection = true
   database_name       = var.db_name
   database_user       = var.db_user
-  database_password   = var.db_password
+  database_password   = local.db_password_effective
 
   depends_on = [google_project_service.required]
+}
+
+import {
+  for_each = var.create_cloud_sql ? toset(["cloud-sql-instance"]) : toset([])
+
+  to = module.cloud_sql[0].google_sql_database_instance.this
+  id = "projects/${var.project_id}/instances/${local.prefix}-pg"
+}
+
+import {
+  for_each = var.create_cloud_sql ? toset(["cloud-sql-database"]) : toset([])
+
+  to = module.cloud_sql[0].google_sql_database.app
+  id = "projects/${var.project_id}/instances/${local.prefix}-pg/databases/${var.db_name}"
+}
+
+import {
+  for_each = var.create_cloud_sql ? toset(["cloud-sql-user"]) : toset([])
+
+  to = module.cloud_sql[0].google_sql_user.app
+  id = "${var.project_id}/${local.prefix}-pg/${var.db_user}"
 }
 
 module "waf" {
@@ -397,6 +577,76 @@ module "frontend_lb" {
   https_forwarding_rule_name        = "${local.prefix}-frontend-https-fr"
 
   depends_on = [google_project_service.required, module.frontend, google_dns_managed_zone.public]
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-address"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_address.this
+  id = "projects/${var.project_id}/global/addresses/${local.prefix}-frontend-ip"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-neg"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_region_network_endpoint_group.frontend
+  id = "projects/${var.project_id}/regions/${var.region}/networkEndpointGroups/${local.prefix}-frontend-neg"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-backend-service"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_backend_service.frontend
+  id = "projects/${var.project_id}/global/backendServices/${local.prefix}-frontend-bes"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-urlmap"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_url_map.this
+  id = "projects/${var.project_id}/global/urlMaps/${local.prefix}-frontend-urlmap"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-urlmap-redirect"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_url_map.redirect[0]
+  id = "projects/${var.project_id}/global/urlMaps/${local.prefix}-frontend-urlmap-redirect"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-http-proxy"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_target_http_proxy.this[0]
+  id = "projects/${var.project_id}/global/targetHttpProxies/${local.prefix}-frontend-http-proxy"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-https-proxy"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_target_https_proxy.this[0]
+  id = "projects/${var.project_id}/global/targetHttpsProxies/${local.prefix}-frontend-https-proxy"
+}
+
+import {
+  for_each = var.create_frontend_lb ? toset(["frontend-lb-http-fr"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_forwarding_rule.http[0]
+  id = "projects/${var.project_id}/global/forwardingRules/${local.prefix}-frontend-http-fr"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb ? toset(["frontend-lb-https-fr"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_global_forwarding_rule.https[0]
+  id = "projects/${var.project_id}/global/forwardingRules/${local.prefix}-frontend-https-fr"
+}
+
+import {
+  for_each = var.create_frontend_lb && var.enable_https_lb && length(var.managed_certificate_domains) == 0 ? toset(["frontend-lb-self-signed-cert"]) : toset([])
+
+  to = module.frontend_lb[0].google_compute_ssl_certificate.self_signed[0]
+  id = "projects/${var.project_id}/global/sslCertificates/${local.prefix}-frontend-ip-self-signed-cert"
 }
 
 resource "google_dns_record_set" "frontend_a" {

@@ -55,7 +55,7 @@ def list_public_restaurants() -> list[dict]:
     """
 
     try:
-        response = requests.get(f"{API_BASE}/restaurants", headers=build_backend_headers(), timeout=10)
+        response = requests.get(f"{API_BASE}/restaurants", timeout=10)
         if response.status_code != 200:
             return []
         data = response.json()

@@ -35,11 +35,11 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 # ------------------------------------------------------------------ #
 _MOBILE_RE = re.compile(r"Mobile|Android|iPhone|iPad|iPod|Opera Mini|IEMobile", re.I)
 _BROWSER_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("Chrome",  re.compile(r"Chrome/[\d.]+")),
-    ("Safari",  re.compile(r"Safari/[\d.]+(?!.*Chrome)")),
+    ("Chrome", re.compile(r"Chrome/[\d.]+")),
+    ("Safari", re.compile(r"Safari/[\d.]+(?!.*Chrome)")),
     ("Firefox", re.compile(r"Firefox/[\d.]+")),
-    ("Edge",    re.compile(r"Edg/[\d.]+")),
-    ("Opera",   re.compile(r"OPR/[\d.]+")),
+    ("Edge", re.compile(r"Edg/[\d.]+")),
+    ("Opera", re.compile(r"OPR/[\d.]+")),
 ]
 
 
@@ -83,7 +83,7 @@ def record_menu_view(
     # Extract lightweight metadata from the incoming request.
     user_agent = (request.headers.get("user-agent") or "")[:512]
     raw_ip = request.headers.get("x-forwarded-for") or (request.client.host if request.client else None)
-    referrer = (request.headers.get("referer") or None)
+    referrer = request.headers.get("referer") or None
 
     view = MenuView(
         restaurant_id=restaurant.id,
@@ -159,11 +159,7 @@ def _build_stats(
     hourly_breakdown = [MenuViewHourlyStat(hour=h, views=hourly_map.get(h, 0)) for h in range(24)]
 
     # ---- CU-08: device & browser distribution ----
-    ua_rows = (
-        db.query(MenuView.user_agent)
-        .filter(*range_filter)
-        .all()
-    )
+    ua_rows = db.query(MenuView.user_agent).filter(*range_filter).all()
     device_counts: dict[str, int] = {}
     browser_counts: dict[str, int] = {}
     for (ua,) in ua_rows:
@@ -175,11 +171,13 @@ def _build_stats(
     total_in_range = len(ua_rows) or 1  # avoid division by zero
     device_breakdown = sorted(
         [DeviceStat(name=k, count=v, percentage=round(v / total_in_range * 100, 1)) for k, v in device_counts.items()],
-        key=lambda x: x.count, reverse=True,
+        key=lambda x: x.count,
+        reverse=True,
     )
     browser_breakdown = sorted(
         [DeviceStat(name=k, count=v, percentage=round(v / total_in_range * 100, 1)) for k, v in browser_counts.items()],
-        key=lambda x: x.count, reverse=True,
+        key=lambda x: x.count,
+        reverse=True,
     )
 
     filtered_views = sum(d.views for d in daily_breakdown) if (start_date and end_date) else None
@@ -283,16 +281,18 @@ def export_csv(
     writer.writerow(["id", "slug", "source", "user_agent", "dispositivo", "navegador", "referrer", "viewed_at"])
 
     for r in rows:
-        writer.writerow([
-            str(r.id),
-            r.slug,
-            r.source,
-            r.user_agent or "",
-            _classify_device(r.user_agent),
-            _classify_browser(r.user_agent),
-            r.referrer or "",
-            r.viewed_at.isoformat() if r.viewed_at else "",
-        ])
+        writer.writerow(
+            [
+                str(r.id),
+                r.slug,
+                r.source,
+                r.user_agent or "",
+                _classify_device(r.user_agent),
+                _classify_browser(r.user_agent),
+                r.referrer or "",
+                r.viewed_at.isoformat() if r.viewed_at else "",
+            ]
+        )
 
     buf.seek(0)
     filename = f"analytics_{restaurant.slug}"

@@ -91,7 +91,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Reject requests that exceed 100 req/min per client IP."""
 
     async def dispatch(self, request: Request, call_next):
-        client_ip = (request.client.host if request.client else "127.0.0.1")
+        client_ip = request.client.host if request.client else "127.0.0.1"
         key = f"rate_limit:{client_ip}"
 
         if not _strategy.hit(_rate, key):
@@ -140,6 +140,7 @@ PUBLIC_PATHS = [
     "/menu",
 ]
 
+
 def _is_public_path(request_path: str) -> bool:
     """Check if a path is public"""
     # Exact match for root
@@ -149,6 +150,8 @@ def _is_public_path(request_path: str) -> bool:
     if any(request_path.startswith(path + "/") or request_path == path for path in PUBLIC_PATHS if path != "/"):
         return True
     return False
+
+
 # Plantillas HTML (shared)
 
 
@@ -206,16 +209,14 @@ async def enforce_https_middleware(request: Request, call_next):
     return response
 
 
-
-
-#cPUBLIC_PATHS = ["/", "/auth/login", "/auth/register"]
+# cPUBLIC_PATHS = ["/", "/auth/login", "/auth/register"]
 
 
 @app.get("/restaurant", response_class=HTMLResponse)
 async def restaurant_dashboard(request: Request):
     context = get_template_context(request)
-    return templates.TemplateResponse("restaurants/restaurant_form.html",
-                                      { context })
+    return templates.TemplateResponse("restaurants/restaurant_form.html", {context})
+
 
 @app.get("/restaurant_form", response_class=HTMLResponse)
 async def restaurant_form(request: Request):
@@ -239,17 +240,13 @@ async def restaurant_form(request: Request):
     except Exception as e:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            {"request": request,
-             "error": f"No se pudo conectar a la API: {e}",
-              "context": context}
+            {"request": request, "error": f"No se pudo conectar a la API: {e}", "context": context},
         )
 
     if resp.status_code != 200:
         return templates.TemplateResponse(
             "restaurants/restaurant_form.html",
-            {
-             "error": f"Error {resp.status_code} al obtener datos",
-              **get_template_context(request)}
+            {"error": f"Error {resp.status_code} al obtener datos", **get_template_context(request)},
         )
 
     restaurant_data = resp.json()  # JSON devuelto por la API
@@ -257,10 +254,8 @@ async def restaurant_form(request: Request):
     restaurant = restaurant_data[0] if isinstance(restaurant_data, list) else restaurant_data
 
     return templates.TemplateResponse(
-        "restaurants/restaurant_form.html",
-        { "restaurant": restaurant, **get_template_context(request)}
+        "restaurants/restaurant_form.html", {"restaurant": restaurant, **get_template_context(request)}
     )
-
 
 
 @app.middleware("http")
@@ -313,6 +308,7 @@ async def jwt_middleware(request: Request, call_next):
         return redirect
 
     return await call_next(request)
+
 
 # Incluir routers de API
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])

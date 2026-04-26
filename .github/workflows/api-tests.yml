@@ -371,7 +371,7 @@ jobs:
           tags: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}
 
       - name: Security gate - Trivy (HIGH,CRITICAL)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
           image-ref: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.ARTIFACT_REGISTRY_REPO }}/${{ matrix.image_name }}:${{ github.sha }}

@@ -45,7 +45,7 @@ def autenticar_usuario(usuario: str, password: str):
         "rol": rol,
         "user_id": user_id,
         "restaurant_id": restaurant_id,
-        "restaurant_slug": restaurant_slug
+        "restaurant_slug": restaurant_slug,
     }
 
 

@@ -117,7 +117,6 @@ def delete_restaurant(token: str, restaurant_id: str):
         return {"error": True, "detalle": "No se pudo eliminar el restaurante"}
 
 
-
 def enviar_a_backend_externo(data: RestaurantCreate, token: str = None):
     return create_or_update_restaurant(data, token)
 

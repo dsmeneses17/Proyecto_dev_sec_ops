@@ -184,11 +184,11 @@ def _clean_db(request):
             text(
                 "\n".join(
                     [
-                        'TRUNCATE TABLE menu_views RESTART IDENTITY CASCADE;',
-                        'TRUNCATE TABLE dishes RESTART IDENTITY CASCADE;',
-                        'TRUNCATE TABLE categories RESTART IDENTITY CASCADE;',
-                        'TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;',
-                        'TRUNCATE TABLE users RESTART IDENTITY CASCADE;',
+                        "TRUNCATE TABLE menu_views RESTART IDENTITY CASCADE;",
+                        "TRUNCATE TABLE dishes RESTART IDENTITY CASCADE;",
+                        "TRUNCATE TABLE categories RESTART IDENTITY CASCADE;",
+                        "TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;",
+                        "TRUNCATE TABLE users RESTART IDENTITY CASCADE;",
                     ]
                 )
             )

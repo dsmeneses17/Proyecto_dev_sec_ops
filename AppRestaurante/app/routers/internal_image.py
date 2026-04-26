@@ -1,10 +1,10 @@
 """Internal image endpoints for proxying private object-storage images."""
 
 import logging
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
 
 from botocore.exceptions import BotoCoreError, ClientError
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 
 from app.services.storage import build_display_url, read_object_from_storage
 
@@ -13,24 +13,22 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/api/internal/signed-image-url")
-async def get_signed_image_url(
-    object_name: str = Query(..., description="Object name or URL to sign")
-):
+async def get_signed_image_url(object_name: str = Query(..., description="Object name or URL to sign")):
     """
     Convert object_name or URL to app proxy URL for display.
     Used by frontend templates to avoid signed URLs in clients.
-    
+
     Args:
         object_name: e.g. "uploads/user123/logo/abc.webp" or full URL
-        
+
     Returns:
-        App media proxy URL
+       App media proxy URL
     """
     if not object_name:
         raise HTTPException(status_code=400, detail="object_name is required")
-    
+
     logger.debug("Signing image URL object_name=%s", object_name)
-    
+
     try:
         proxy_url = build_display_url(object_name, expires_in_seconds=3600)
         logger.info("Image proxy URL generated successfully")
