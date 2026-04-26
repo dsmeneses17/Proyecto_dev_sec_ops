@@ -119,6 +119,14 @@ jobs:
             else
               echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
               echo "Informational drift only (provider/runtime metadata churn and/or ignored ephemeral resources)."
+
+              if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+                echo "Reconciling informational drift into Terraform state (refresh-only apply)."
+                terraform apply -refresh-only -auto-approve refresh.tfplan
+                echo "informational_drift_reconciled=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "informational_drift_reconciled=false" >> "$GITHUB_OUTPUT"
+              fi
             fi
 
             {
@@ -128,10 +136,12 @@ jobs:
               echo "- actionable_count: ${actionable_count}"
               echo "- ignored_actionable_count: ${ignored_count}"
               echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
+              echo "- informational_drift_reconciled: $([ "$actionable_count" -eq 0 ] && [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ] && echo true || echo false)"
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "drift_detected=false" >> "$GITHUB_OUTPUT"
             echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
+            echo "informational_drift_reconciled=false" >> "$GITHUB_OUTPUT"
             echo "No drift detected." > refresh-plan.txt
             {
               echo "## Drift Check Summary"
@@ -140,6 +150,7 @@ jobs:
               echo "- actionable_count: 0"
               echo "- ignored_actionable_count: 0"
               echo "- ignored_addresses: ${IGNORED_DRIFT_ADDRESSES}"
+              echo "- informational_drift_reconciled: false"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
