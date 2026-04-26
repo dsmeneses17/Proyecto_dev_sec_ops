@@ -220,11 +220,56 @@ Archivo: [api-tests.yml](.github/workflows/api-tests.yml)
 
 Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
+- `drift-check-dev`: ejecuta `terraform plan -refresh-only -detailed-exitcode` antes del plan normal, genera reporte de drift y publica artefacto `terraform-dev-drift-report`.
+- `manual-approval-drift-dev`: en `push` a `main`, solicita aprobacion manual si se detecta drift antes de continuar.
 - `plan-dev`: init, validate y plan de Terraform para foundation-dev.
 - `security-scan-dev`: escaneo IaC con Trivy y bloqueo por severidad HIGH/CRITICAL.
 - `validate-plan-dev`: valida el plan y bloquea cambios destructivos.
 - `manual-approval-dev`: requiere aprobacion manual explicita antes de aplicar.
 - `apply-dev`: aplica Terraform en push a main solo si plan, escaneo, validacion y aprobacion manual fueron exitosos.
+
+Reglas de drift:
+
+- Si hay drift en PR o en ejecuciones que no son `push` a `main`, el pipeline falla para forzar investigacion.
+- Si hay drift en `push` a `main`, se exige aprobacion manual adicional (`manual-approval-drift-dev`) antes del plan/apply.
+
+### Habilitar auditoria de objetos en Cloud Storage (Data Access)
+
+Para identificar quien borra/crea objetos (por ejemplo `rotate_secret_source`) se deben habilitar Data Access logs para Cloud Storage.
+
+```bash
+PROJECT_ID="proyecto-devsecops-493813"
+
+gcloud projects get-iam-policy "$PROJECT_ID" --format=json > /tmp/project-iam-policy.json
+
+jq '
+  .auditConfigs = (
+    ((.auditConfigs // []) | map(select(.service != "storage.googleapis.com")))
+    + [{
+      service: "storage.googleapis.com",
+      auditLogConfigs: [
+        {logType: "DATA_READ"},
+        {logType: "DATA_WRITE"}
+      ]
+    }]
+  )
+' /tmp/project-iam-policy.json > /tmp/project-iam-policy.with-storage-audit.json
+
+gcloud projects set-iam-policy "$PROJECT_ID" /tmp/project-iam-policy.with-storage-audit.json
+```
+
+El flujo anterior preserva los bindings existentes al partir de la policy actual del proyecto.
+
+Consulta recomendada para rastrear actor de drift en bucket de imagenes:
+
+```bash
+gcloud logging read \
+  'protoPayload.serviceName="storage.googleapis.com" AND resource.labels.bucket_name="livemenu-foundation-dev-images-proyecto-devsecops-493813" AND (protoPayload.methodName:"storage.objects.delete" OR protoPayload.methodName:"storage.objects.create" OR protoPayload.methodName:"storage.objects.update")' \
+  --project "$PROJECT_ID" \
+  --freshness=30d \
+  --limit=200 \
+  --format='table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail,protoPayload.requestMetadata.callerSuppliedUserAgent,protoPayload.resourceName)'
+```
 
 ## Backup y restauracion
 

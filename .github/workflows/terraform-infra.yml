@@ -28,9 +28,121 @@ env:
   TF_VERSION: "1.14.9"
 
 jobs:
+  drift-check-dev:
+    name: Drift check (refresh-only, foundation-dev)
+    runs-on: ubuntu-latest
+
+    outputs:
+      drift_detected: ${{ steps.refresh_plan.outputs.drift_detected }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure backend block for CI
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          cat > backend.auto.tf <<'EOF'
+          terraform {
+            backend "gcs" {}
+          }
+          EOF
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=${{ vars.TF_STATE_PREFIX_DEV }}" \
+            -lockfile=readonly
+
+      - name: Query remote Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "commit_sha=${GITHUB_SHA}"
+          echo "ref_name=${GITHUB_REF}"
+          terraform state pull > tfstate.remote.json
+          echo "Remote state loaded from backend before drift check:"
+          jq -r '"lineage=\(.lineage) serial=\(.serial) terraform_version=\(.terraform_version) resources=\((.resources // []) | length)"' tfstate.remote.json
+
+      - name: Terraform refresh-only plan (detect drift)
+        id: refresh_plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
+        run: |
+          set +e
+          terraform plan -refresh-only -detailed-exitcode -out=refresh.tfplan
+          rc=$?
+          set -e
+
+          if [ "$rc" -eq 1 ]; then
+            echo "Terraform refresh-only plan failed"
+            exit 1
+          fi
+
+          if [ "$rc" -eq 2 ]; then
+            echo "drift_detected=true" >> "$GITHUB_OUTPUT"
+            terraform show -no-color refresh.tfplan > refresh-plan.txt
+            echo "Drift detected."
+          else
+            echo "drift_detected=false" >> "$GITHUB_OUTPUT"
+            echo "No drift detected." > refresh-plan.txt
+          fi
+
+      - name: Enforce drift policy for non-main runs
+        if: steps.refresh_plan.outputs.drift_detected == 'true' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          echo "Drift detected outside push-to-main. Failing this run."
+          echo "Resolve drift with Terraform apply or approve a main run for controlled reconciliation."
+          exit 1
+
+      - name: Upload drift report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-dev-drift-report
+          path: |
+            ${{ env.TF_WORKING_DIR }}/refresh.tfplan
+            ${{ env.TF_WORKING_DIR }}/refresh-plan.txt
+            ${{ env.TF_WORKING_DIR }}/tfstate.remote.json
+            ${{ env.TF_WORKING_DIR }}/backend.auto.tf
+
+  manual-approval-drift-dev:
+    name: Manual approval when drift is detected
+    runs-on: ubuntu-latest
+    needs: [drift-check-dev]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.drift-check-dev.result == 'success' && needs.drift-check-dev.outputs.drift_detected == 'true'
+
+    steps:
+      - name: Require explicit approval for drift reconciliation
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ vars.TF_APPLY_APPROVERS != '' && vars.TF_APPLY_APPROVERS || github.actor }}
+          minimum-approvals: 1
+          issue-title: "Terraform drift detected - approval required (foundation-dev)"
+          issue-body: |
+            Terraform detected external drift before plan in foundation-dev.
+            Review artifact terraform-dev-drift-report and approve reconciliation.
+
   plan-dev:
     name: Terraform plan (foundation-dev)
     runs-on: ubuntu-latest
+    needs: [drift-check-dev, manual-approval-drift-dev]
+    if: needs.drift-check-dev.result == 'success' && (needs.manual-approval-drift-dev.result == 'success' || needs.manual-approval-drift-dev.result == 'skipped')
 
     steps:
       - name: Checkout
