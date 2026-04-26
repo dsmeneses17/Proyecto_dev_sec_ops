@@ -13,7 +13,7 @@ Plataforma de menu digital para restaurantes con frontend web, API REST y despli
 - [Cobertura RNF](docs/COBERTURA_RNF.md)
 - [Testing](docs/TESTING.md)
 
-## Docs entrega 2
+## Documentos entrega 2
 - [Documentacion principal](docs/DOCUMENTACION_PROYECTO.md)
 - [Estrategia de Seguridad](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/Seguridad/ESTRATEGIA_SEGURIDAD.md)
 - [Reporte vulnerabilidades Backend](https://github.com/dsmeneses17/Proyecto_dev_sec_ops/blob/main/docs/Seguridad/Report%20Vulneravilidades%20-%20livemenu-foundation-dev-backend.pdf)
