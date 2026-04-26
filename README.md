@@ -221,7 +221,7 @@ Archivo: [api-tests.yml](.github/workflows/api-tests.yml)
 Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
 - `drift-check-dev`: ejecuta `terraform plan -refresh-only -detailed-exitcode` antes del plan normal, genera reporte de drift y publica artefacto `terraform-dev-drift-report`.
-- `manual-approval-drift-dev`: en `push` a `main`, solicita aprobacion manual si se detecta drift antes de continuar.
+- `manual-approval-drift-dev`: en `push` a `main`, solicita aprobacion manual si se detecta drift accionable antes de continuar.
 - `plan-dev`: init, validate y plan de Terraform para foundation-dev.
 - `security-scan-dev`: escaneo IaC con Trivy y bloqueo por severidad HIGH/CRITICAL.
 - `validate-plan-dev`: valida el plan y bloquea cambios destructivos.
@@ -230,8 +230,9 @@ Archivo: [terraform-infra.yml](.github/workflows/terraform-infra.yml)
 
 Reglas de drift:
 
-- Si hay drift en PR o en ejecuciones que no son `push` a `main`, el pipeline falla para forzar investigacion.
-- Si hay drift en `push` a `main`, se exige aprobacion manual adicional (`manual-approval-drift-dev`) antes del plan/apply.
+- Si hay drift accionable en PR o en ejecuciones que no son `push` a `main`, el pipeline falla para forzar investigacion.
+- Si hay drift accionable en `push` a `main`, se exige aprobacion manual adicional (`manual-approval-drift-dev`) antes del plan/apply.
+- El reporte conserva drift informativo (metadata de proveedor/runtime) para observabilidad, pero no bloquea por si solo.
 
 ### Habilitar auditoria de objetos en Cloud Storage (Data Access)
 

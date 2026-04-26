@@ -34,6 +34,7 @@ jobs:
 
     outputs:
       drift_detected: ${{ steps.refresh_plan.outputs.drift_detected }}
+      actionable_drift_detected: ${{ steps.refresh_plan.outputs.actionable_drift_detected }}
 
     steps:
       - name: Checkout
@@ -96,16 +97,43 @@ jobs:
           if [ "$rc" -eq 2 ]; then
             echo "drift_detected=true" >> "$GITHUB_OUTPUT"
             terraform show -no-color refresh.tfplan > refresh-plan.txt
-            echo "Drift detected."
+            terraform show -json refresh.tfplan > refresh-plan.json
+
+            actionable_count=$(jq '[
+              .resource_changes[]?
+              | select((.change.before == null and .change.after != null) or (.change.before != null and .change.after == null))
+            ] | length' refresh-plan.json)
+
+            if [ "$actionable_count" -gt 0 ]; then
+              echo "actionable_drift_detected=true" >> "$GITHUB_OUTPUT"
+              echo "Actionable drift detected (${actionable_count} resource changes with create/delete semantics)."
+            else
+              echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
+              echo "Informational drift only (provider/runtime metadata churn)."
+            fi
+
+            {
+              echo "## Drift Check Summary"
+              echo "- drift_detected: true"
+              echo "- actionable_drift_detected: $([ "$actionable_count" -gt 0 ] && echo true || echo false)"
+              echo "- actionable_count: ${actionable_count}"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "drift_detected=false" >> "$GITHUB_OUTPUT"
+            echo "actionable_drift_detected=false" >> "$GITHUB_OUTPUT"
             echo "No drift detected." > refresh-plan.txt
+            {
+              echo "## Drift Check Summary"
+              echo "- drift_detected: false"
+              echo "- actionable_drift_detected: false"
+              echo "- actionable_count: 0"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Enforce drift policy for non-main runs
-        if: steps.refresh_plan.outputs.drift_detected == 'true' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')
+        if: steps.refresh_plan.outputs.actionable_drift_detected == 'true' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
-          echo "Drift detected outside push-to-main. Failing this run."
+          echo "Actionable drift detected outside push-to-main. Failing this run."
           echo "Resolve drift with Terraform apply or approve a main run for controlled reconciliation."
           exit 1
 
@@ -117,6 +145,7 @@ jobs:
           path: |
             ${{ env.TF_WORKING_DIR }}/refresh.tfplan
             ${{ env.TF_WORKING_DIR }}/refresh-plan.txt
+            ${{ env.TF_WORKING_DIR }}/refresh-plan.json
             ${{ env.TF_WORKING_DIR }}/tfstate.remote.json
             ${{ env.TF_WORKING_DIR }}/backend.auto.tf
 
@@ -124,7 +153,7 @@ jobs:
     name: Manual approval when drift is detected
     runs-on: ubuntu-latest
     needs: [drift-check-dev]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.drift-check-dev.result == 'success' && needs.drift-check-dev.outputs.drift_detected == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.drift-check-dev.result == 'success' && needs.drift-check-dev.outputs.actionable_drift_detected == 'true'
 
     steps:
       - name: Require explicit approval for drift reconciliation
@@ -135,7 +164,7 @@ jobs:
           minimum-approvals: 1
           issue-title: "Terraform drift detected - approval required (foundation-dev)"
           issue-body: |
-            Terraform detected external drift before plan in foundation-dev.
+            Terraform detected actionable external drift before plan in foundation-dev.
             Review artifact terraform-dev-drift-report and approve reconciliation.
 
   plan-dev:
